@@ -58,7 +58,7 @@ export function Splash() {
           <Text color={COLOR.alt}>↵</Text>
           <Text color={COLOR.dim}> browse</Text>
           <Text color={COLOR.dim}>{`  ${ICON.dot}  `}</Text>
-          <Text color={COLOR.alt}>^c</Text>
+          <Text color={COLOR.alt}>esc</Text>
           <Text color={COLOR.dim}> quit</Text>
         </Text>
       </Box>
