@@ -8,17 +8,6 @@ A high-performance, terminal-native torrent client and search engine.
 
 Windskye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
 
-## Sources it searches from
-
-Windskye ships with a curated list of reputable torrent (trusted my many others, yours included) indexes to provide high-quality search results out of the box. These soruces will be added on or will be updated as the time goes.
-
-| Category | Sources |
-|----------|---------|
-| Games | FitGirl |
-| Movies | YTS, The Pirate Bay, 1337x |
-| TV | EZTV, SolidTorrents, The Pirate Bay, 1337x |
-| Anime | Nyaa, SubsPlease |
-
 ## Requirements
 
 - Node.js (v18 or higher)
