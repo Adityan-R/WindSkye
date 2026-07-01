@@ -1,56 +1,65 @@
-# TorVault ⚡
+# Windskye
 
-**A curated, terminal-native torrent client for legal content.**
+A high-performance, terminal-native torrent client and search engine.
 
-TorVault is a lightweight, web-based torrent client designed with a retro terminal aesthetic. It focuses exclusively on legal content, providing built-in search capabilities for the Internet Archive, Linux ISOs, and open-source software.
+## Overview
 
-## Features
+Windskye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
 
-- **Terminal Aesthetic**: A sleek, keyboard-driven UI inspired by classic terminals. 
-- **Legal Content Search**: Integrated search providers to find open-source software, datasets, and public domain media without leaving the app.
-- **WebTorrent Integration**: Fast and reliable torrent downloading and seeding directly from your browser interface, powered by `webtorrent`.
-- **Create & Seed**: Easily create new `.torrent` files by dropping files into the browser. TorVault can automatically start seeding them immediately.
-- **Real-time Updates**: Live status updates for downloads and seeding via Server-Sent Events (SSE).
-- **Keyboard Navigation**: Press `/` to search, `Tab` to navigate, and use keyboard shortcuts for quick actions.
+## Requirements
 
-## Tech Stack
+- Node.js (v18 or higher)
 
-- **Backend**: Node.js, Express.js
-- **Torrent Engine**: WebTorrent, create-torrent, parse-torrent
-- **Frontend**: Vanilla HTML/CSS/JavaScript (Single Page Application)
-- **File Uploads**: Multer
+## Quick Start
 
-## Installation
+You can launch Windskye immediately without installing it globally by using `npx`:
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/TorVault.git
-   cd TorVault
-   ```
+```sh
+npx windskye
+```
 
-2. **Install dependencies:**
-   ```bash
+Alternatively, you can provide initial arguments to bypass the startup screen:
+
+```sh
+# Start a download immediately via magnet link
+npx windskye "magnet:?xt=urn:btih:..."
+
+# Open a local .torrent file
+npx windskye path/to/file.torrent
+```
+
+## Key Features
+
+- **Concurrent Aggregation:** Queries multiple public trackers and indexes simultaneously for the fastest possible results.
+- **Modern TUI:** A highly responsive, keyboard-navigable terminal user interface built with React Ink.
+- **Background Processing:** Seamlessly queue multiple torrents. Downloads run persistently in the background while you continue to browse.
+- **Granular Controls:** Full control over active connections, bandwidth, and seed states.
+- **Privacy Focused:** Windskye interacts directly with the BitTorrent network. No central servers, no telemetry, no tracking.
+
+## Development
+
+To build Windskye from source and run it locally:
+
+1. Clone the repository and navigate into the directory.
+2. Install dependencies:
+   ```sh
    npm install
    ```
-
-3. **Start the server:**
-   ```bash
-   npm start
-   ```
-   For development with auto-reload:
-   ```bash
+3. Run the development environment:
+   ```sh
    npm run dev
    ```
 
-4. **Open in Browser:**
-   Navigate to `http://localhost:3000` to access the TorVault interface.
+To build a production bundle:
+```sh
+npm run build
+node dist/cli.cjs
+```
 
-## Usage
+## Contributing
 
-- **Search**: Select a category from the sidebar (Archive, Linux, Software, Datasets) or simply press `/` to focus the search bar. You can paste magnet links directly into the search.
-- **Download**: Press `d` (or click) on a search result to begin downloading.
-- **Create**: Navigate to the "Create" view to drag and drop files, generate a `.torrent` file, and instantly start seeding.
+Pull requests are welcome. Please ensure that all changes pass the TypeScript compiler checks and adhere to the existing code formatting standards.
 
-## License
+## Legal Disclaimer
 
-This project is licensed under the [MIT License](LICENSE).
+Windskye is a decentralized peer-to-peer file sharing tool. Users are solely responsible for ensuring they have the legal right to download and distribute the content they interact with. The developers of Windskye do not endorse or support copyright infringement.

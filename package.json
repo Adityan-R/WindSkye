@@ -1,27 +1,74 @@
 {
-  "name": "torvault",
-  "version": "1.0.0",
-  "description": "A curated, terminal-native torrent client for legal content",
+  "name": "windskye",
+  "version": "1.1.1",
+  "description": "Terminal torrent search",
   "type": "module",
-  "main": "server/index.js",
+  "bin": {
+    "windskye": "./dist/cli.cjs"
+  },
+  "files": [
+    "dist",
+    "preview"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "dev": "tsx src/index.tsx",
+    "build": "tsup",
+    "postbuild": "node scripts/postbuild.cjs",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify:seeding": "tsx scripts/verify-seeding.ts",
+    "previews": "tsx scripts/render-previews.tsx",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "torrent",
+    "torrent-client",
+    "torrent-search",
+    "downloader",
+    "magnet",
+    "magnet-links",
+    "p2p",
+    "webtorrent",
+    "seeding",
+    "tui",
     "terminal",
-    "legal",
-    "webtorrent"
+    "cli",
+    "ink",
+    "zero-configuration",
+    "zero-setup",
+    "fitgirl"
   ],
-  "author": "TorVault",
+  "author": "bairon",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baairon/windskye.git"
+  },
+  "homepage": "https://github.com/baairon/windskye#readme",
+  "bugs": {
+    "url": "https://github.com/baairon/windskye/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "cors": "^2.8.5",
-    "create-torrent": "^6.0.18",
-    "express": "^4.21.0",
-    "multer": "^1.4.5-lts.1",
-    "parse-torrent": "^11.0.17",
-    "webtorrent": "^3.0.16"
+    "env-paths": "^4.0.0",
+    "ink": "^7.0.5",
+    "parse-torrent": "^11.0.21",
+    "react": "^19.2.7",
+    "webtorrent": "^2.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2",
+    "@types/react": "^19.2.17",
+    "ink-testing-library": "^4.0.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

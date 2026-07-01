@@ -37,7 +37,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     const { name, comment, startSeeding } = req.body;
 
     // Move uploaded files to a named directory
-    const torrentName = name || `torvault-${Date.now()}`;
+    const torrentName = name || `windskye-${Date.now()}`;
     const torrentDir = path.join(uploadsDir, torrentName);
     if (!fs.existsSync(torrentDir)) {
       fs.mkdirSync(torrentDir, { recursive: true });
@@ -52,8 +52,8 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     // Create torrent
     const opts = {
       name: torrentName,
-      comment: comment || 'Created with TorVault',
-      createdBy: 'TorVault 1.0.0',
+      comment: comment || 'Created with Windskye',
+      createdBy: 'Windskye 1.0.0',
       announceList: [
         ['udp://tracker.opentrackr.org:1337/announce'],
         ['udp://open.stealth.si:80/announce'],
