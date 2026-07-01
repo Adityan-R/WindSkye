@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TorVault — A curated, terminal-native torrent client for legal content from Internet Archive, Linux ISOs, and open-source software.">
+  <title>TorVault — Terminal Torrent Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/terminal.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="app-header">
+      <div id="logo-block">
+        <pre id="logo-ascii">
+▀█▀ █▀█ █▀█ ▄ █ █▀▄ █ █ █   ▀█▀
+ █  █ █ █▀▄ ▀▄▀ █▀█ █ █ █    █ 
+ ▀  ▀▀▀ ▀ ▀  ▀  ▀ ▀ ▀▀▀ ▀▀▀  ▀ </pre>
+      </div>
+      <p id="app-subtitle"></p>
+    </header>
+
+    <!-- Main Content -->
+    <main id="app-main">
+      <!-- Sidebar -->
+      <nav id="sidebar">
+        <ul id="nav-list">
+          <li class="nav-item active" data-view="all"><span class="nav-cursor">❯</span><span class="nav-label">All</span></li>
+          <li class="nav-item" data-view="archive"><span class="nav-cursor">❯</span><span class="nav-label">Archive</span></li>
+          <li class="nav-item" data-view="linux"><span class="nav-cursor">❯</span><span class="nav-label">Linux</span></li>
+          <li class="nav-item" data-view="software"><span class="nav-cursor">❯</span><span class="nav-label">Software</span></li>
+          <li class="nav-item" data-view="datasets"><span class="nav-cursor">❯</span><span class="nav-label">Datasets</span></li>
+          <li class="nav-divider"></li>
+          <li class="nav-item" data-view="downloads"><span class="nav-cursor">❯</span><span class="nav-label">Downloads</span><span id="dl-badge" class="badge hidden">0</span></li>
+          <li class="nav-item" data-view="seeding"><span class="nav-cursor">❯</span><span class="nav-label">Seeding</span><span id="seed-badge" class="badge hidden">0</span></li>
+          <li class="nav-divider"></li>
+          <li class="nav-item" data-view="create"><span class="nav-cursor">❯</span><span class="nav-label">Create</span></li>
+        </ul>
+      </nav>
+
+      <!-- Content Pane -->
+      <section id="content-pane">
+        <!-- Landing View -->
+        <div id="view-landing" class="view active">
+          <div id="landing-content">
+            <p class="landing-desc">A curated, terminal-native torrent client.</p>
+            <p class="landing-desc dim">Legal content from trusted sources.</p>
+            <div class="landing-categories">
+              <span class="cat-pill" data-cat="archive">archive</span>
+              <span class="cat-dot">·</span>
+              <span class="cat-pill" data-cat="linux">linux</span>
+              <span class="cat-dot">·</span>
+              <span class="cat-pill" data-cat="software">software</span>
+              <span class="cat-dot">·</span>
+              <span class="cat-pill" data-cat="datasets">datasets</span>
+            </div>
+            <div id="search-box-landing" class="search-box">
+              <label class="search-label">search</label>
+              <div class="search-input-wrap">
+                <span class="search-prompt">❯</span>
+                <input type="text" id="search-input-landing" class="search-input" placeholder="search or paste a magnet link..." autocomplete="off" spellcheck="false">
+                <span class="cursor-blink"></span>
+              </div>
+            </div>
+            <div class="landing-hint">
+              <span class="hint-key">/</span> search <span class="hint-sep">·</span>
+              <span class="hint-key">tab</span> navigate <span class="hint-sep">·</span>
+              <span class="hint-key">?</span> help
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Results View -->
+        <div id="view-results" class="view">
+          <div id="results-search-box" class="search-box compact">
+            <label class="search-label">search</label>
+            <div class="search-input-wrap">
+              <span class="search-prompt">❯</span>
+              <input type="text" id="search-input-results" class="search-input" placeholder="search or paste a magnet link..." autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <div id="results-header">
+            <span id="results-count"></span>
+            <span id="results-sources" class="dim"></span>
+          </div>
+          <div id="results-table-wrap">
+            <table id="results-table">
+              <thead>
+                <tr>
+                  <th class="col-idx">#</th>
+                  <th class="col-name">Name</th>
+                  <th class="col-size">Size</th>
+                  <th class="col-seeds">Seed:Lch</th>
+                  <th class="col-source">Src</th>
+                </tr>
+              </thead>
+              <tbody id="results-body"></tbody>
+            </table>
+          </div>
+          <div id="results-empty" class="empty-state hidden">
+            <p>No results found. Try a different query.</p>
+          </div>
+          <div id="results-loading" class="loading-state hidden">
+            <p class="loading-text">Searching<span class="loading-dots"></span></p>
+          </div>
+        </div>
+
+        <!-- Downloads View -->
+        <div id="view-downloads" class="view">
+          <div id="downloads-header" class="section-header">
+            <span class="section-title">downloads (<span id="downloads-count">0</span>)</span>
+            <span class="section-line"></span>
+          </div>
+          <div id="downloads-list" class="torrent-list"></div>
+          <div id="downloads-empty" class="empty-state">
+            <p>No active downloads.</p>
+            <p class="dim">Search for content and press <kbd>d</kbd> to start downloading.</p>
+          </div>
+        </div>
+
+        <!-- Seeding View -->
+        <div id="view-seeding" class="view">
+          <div id="seeding-header" class="section-header">
+            <span class="section-title">seeding (<span id="seeding-count">0</span>)</span>
+            <span class="section-line"></span>
+          </div>
+          <div id="seeding-list" class="torrent-list"></div>
+          <div id="seeding-empty" class="empty-state">
+            <p>No active seeds.</p>
+            <p class="dim">Completed downloads will appear here for seeding.</p>
+          </div>
+        </div>
+
+        <!-- Create Torrent View -->
+        <div id="view-create" class="view">
+          <div class="section-header">
+            <span class="section-title">create torrent</span>
+            <span class="section-line"></span>
+          </div>
+          <div id="create-form">
+            <div class="form-group">
+              <label class="form-label">torrent name</label>
+              <input type="text" id="create-name" class="form-input" placeholder="my-awesome-files" spellcheck="false">
+            </div>
+            <div class="form-group">
+              <label class="form-label">comment</label>
+              <input type="text" id="create-comment" class="form-input" placeholder="Created with TorVault" spellcheck="false">
+            </div>
+            <div class="form-group">
+              <label class="form-label">files</label>
+              <div id="drop-zone" class="drop-zone">
+                <p>drop files here or <span class="accent">click to browse</span></p>
+                <input type="file" id="create-files" multiple class="file-input-hidden">
+              </div>
+              <ul id="file-list" class="file-list"></ul>
+            </div>
+            <div class="form-group form-check">
+              <input type="checkbox" id="create-seed" checked>
+              <label for="create-seed">start seeding after creation</label>
+            </div>
+            <button id="create-btn" class="btn-terminal" disabled>
+              <span>[ ⚡ create .torrent ]</span>
+            </button>
+            <div id="create-result" class="hidden"></div>
+          </div>
+        </div>
+
+        <!-- Torrent Detail Modal -->
+        <div id="torrent-detail" class="hidden">
+          <div class="detail-header">
+            <span id="detail-name"></span>
+            <button id="detail-close" class="btn-close">✕</button>
+          </div>
+          <div id="detail-body"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Status Bar -->
+    <footer id="status-bar">
+      <div id="status-shortcuts"></div>
+      <div id="status-info">
+        <span id="status-speed"></span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/js/app.js" type="module"></script>
+</body>
+</html>

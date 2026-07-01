@@ -1,0 +1,27 @@
+{
+  "name": "torvault",
+  "version": "1.0.0",
+  "description": "A curated, terminal-native torrent client for legal content",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": [
+    "torrent",
+    "terminal",
+    "legal",
+    "webtorrent"
+  ],
+  "author": "TorVault",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "create-torrent": "^6.0.18",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "parse-torrent": "^11.0.17",
+    "webtorrent": "^3.0.16"
+  }
+}
