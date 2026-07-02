@@ -1,4 +1,4 @@
-# Windskye
+<img width="1774" height="887" alt="Improved ver1" src="https://github.com/user-attachments/assets/985457a9-3f67-4bb1-82ca-500af2dddd96" />
 
 A high-performance, terminal-native torrent client and search engine.
 
