@@ -5,7 +5,8 @@
 
 Windskye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
 
-<img width="1239" height="645" alt="image" src="https://github.com/user-attachments/assets/2a1315a1-30a6-4939-b3be-1c74214ff42b" />
+<img width="1276" height="733" alt="image" src="https://github.com/user-attachments/assets/c5671cf2-2be3-4a7c-b8d2-5f5738cea1ef" />
+
 
 ## Requirements
 
