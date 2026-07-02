@@ -1,12 +1,11 @@
-<img width="1774" height="887" alt="Improved ver1" src="https://github.com/user-attachments/assets/985457a9-3f67-4bb1-82ca-500af2dddd96" />
+<img width="615" height="132" alt="windskye_readme_header" src="https://github.com/user-attachments/assets/8857dfbb-3093-463b-b7ae-4338cc352128" />
 
-A high-performance, terminal-native torrent client and search engine.
-
-<img width="1239" height="645" alt="image" src="https://github.com/user-attachments/assets/2a1315a1-30a6-4939-b3be-1c74214ff42b" />
 
 ## Overview
 
 Windskye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
+
+<img width="1239" height="645" alt="image" src="https://github.com/user-attachments/assets/2a1315a1-30a6-4939-b3be-1c74214ff42b" />
 
 ## Requirements
 
