@@ -65,6 +65,8 @@ function fakeQueue(
     getSeed: (id: string) => seedMap.get(id),
     activeCount: active,
     seedingCount,
+    createdCount: 0,
+    getCreated: () => [],
     on: () => stub,
     off: () => stub,
   };
@@ -96,6 +98,8 @@ function makeStore(
     setDownloadFocus: noop,
     seedFocus: null,
     setSeedFocus: noop,
+    createFocus: null,
+    setCreateFocus: noop,
     startDownload: noop,
     copyMagnet: noop,
     notice: null,

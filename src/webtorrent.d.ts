@@ -33,6 +33,8 @@ declare module "webtorrent" {
 
   interface TorrentOptions {
     path?: string;
+    name?: string;
+    createdBy?: string;
     announce?: string[];
   }
 

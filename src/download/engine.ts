@@ -28,6 +28,28 @@ export interface AddHandlers {
   onError?: (message: string) => void;
 }
 
+export interface SeedResult {
+  infoHash: string;
+  magnetURI: string;
+  name: string;
+  length: number;
+  torrentFile?: Uint8Array;
+}
+
+export interface SeedHandlers {
+  onSeed?: (result: SeedResult) => void;
+  onError?: (message: string) => void;
+}
+
+// Well-known public trackers for user-created torrents.
+export const DEFAULT_TRACKERS: string[] = [
+  "udp://tracker.opentrackr.org:1337/announce",
+  "udp://open.stealth.si:80/announce",
+  "udp://tracker.openbittorrent.com:6969/announce",
+  "udp://exodus.desync.com:6969/announce",
+  "udp://tracker.torrent.eu.org:451/announce",
+];
+
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -82,6 +104,45 @@ export class TorrentEngine {
     torrent.on("error", (err: unknown) => {
       handlers.onError?.(message(err));
       this.torrents.delete(id);
+      try {
+        torrent.destroy();
+      } catch {}
+    });
+  }
+
+  // Seed a local file or folder. The returned Torrent object fires the 'seed'
+  // event once hashing is complete, at which point infoHash and magnetURI are
+  // available. We use a temporary placeholder ID until then.
+  seed(placeholderId: string, filePath: string, handlers: SeedHandlers): void {
+    const client = this.ensureClient();
+
+    let torrent: Torrent;
+    try {
+      torrent = client.seed(filePath, {
+        announce: DEFAULT_TRACKERS,
+        createdBy: "Windskye",
+      });
+    } catch (e) {
+      handlers.onError?.(message(e));
+      return;
+    }
+    this.torrents.set(placeholderId, torrent);
+
+    torrent.on("seed", () => {
+      // Remap from placeholder to real infoHash now that we know it.
+      this.torrents.delete(placeholderId);
+      this.torrents.set(torrent.infoHash, torrent);
+      handlers.onSeed?.({
+        infoHash: torrent.infoHash,
+        magnetURI: torrent.magnetURI,
+        name: torrent.name,
+        length: torrent.length,
+        torrentFile: torrent.torrentFile,
+      });
+    });
+    torrent.on("error", (err: unknown) => {
+      handlers.onError?.(message(err));
+      this.torrents.delete(placeholderId);
       try {
         torrent.destroy();
       } catch {}

@@ -17,6 +17,19 @@ export interface SeedItem {
   peers: number;
 }
 
+export interface CreatedItem {
+  id: string;           // infoHash (empty until hashing completes)
+  name: string;         // derived from file/folder basename
+  sourcePath: string;   // local file/folder being seeded
+  magnet: string;       // generated magnetURI (empty until ready)
+  sizeBytes: number;
+  status: SeedStatus;   // reuse "seeding" | "paused" | "missing"
+  uploadSpeed: number;
+  uploaded: number;
+  peers: number;
+  createdAt: number;
+}
+
 export interface QueueItem {
   id: string;
   name: string;

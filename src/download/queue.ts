@@ -1,18 +1,23 @@
 import { EventEmitter } from "node:events";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { TorrentEngine, type AddHandlers } from "./engine";
 import {
   saveQueue,
   saveQueueSync,
   saveSeeds,
   saveSeedsSync,
+  saveCreated,
+  saveCreatedSync,
   saveTorrentMeta,
   torrentMetaPath,
   torrentMetaExists,
   deleteTorrentMeta,
   type SeedRecord,
+  type CreatedRecord,
 } from "./persist";
 import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
-import type { QueueItem, SeedItem } from "./types";
+import type { QueueItem, SeedItem, CreatedItem } from "./types";
 import type { SourceId } from "../sources/types";
 
 /**
@@ -51,6 +56,7 @@ export class DownloadQueue extends EventEmitter {
   private poll: ReturnType<typeof setInterval> | null = null;
   private history: HistoryItem[] = [];
   private seeds = new Map<string, SeedItem>();
+  private created = new Map<string, CreatedItem>();
   private strayHits = new Map<string, number>();
   private seedStartedAt = new Map<string, number>();
 
@@ -252,6 +258,16 @@ export class DownloadQueue extends EventEmitter {
       sd.peers = s.peers;
       any = true;
     }
+    // Poll user-created torrents.
+    for (const c of this.created.values()) {
+      if (c.status !== "seeding") continue;
+      const s = this.engine.stats(c.id);
+      if (!s) continue;
+      c.uploadSpeed = s.uploadSpeed;
+      c.uploaded = s.uploaded;
+      c.peers = s.peers;
+      any = true;
+    }
     if (any) this.changed();
   }
 
@@ -262,7 +278,7 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private maybeStopPoll(): void {
-    if (this.activeCount === 0 && this.seedingCount === 0 && this.poll) {
+    if (this.activeCount === 0 && this.seedingCount === 0 && this.createdCount === 0 && this.poll) {
       clearInterval(this.poll);
       this.poll = null;
     }
@@ -524,6 +540,7 @@ export class DownloadQueue extends EventEmitter {
     saveQueueSync(this.getItems());
     saveHistorySync(this.history);
     saveSeedsSync(this.seedRecords());
+    saveCreatedSync(this.createdRecords());
   }
 
   suspend(): void {
@@ -536,11 +553,214 @@ export class DownloadQueue extends EventEmitter {
         it.eta = undefined;
       }
     }
+    // Zero created items' live stats.
+    for (const c of this.created.values()) {
+      if (c.status === "seeding") {
+        c.uploadSpeed = 0;
+        c.peers = 0;
+      }
+    }
     this.persistSync();
     if (this.poll) {
       clearInterval(this.poll);
       this.poll = null;
     }
     this.engine.destroy();
+  }
+
+  // --- user-created torrents ------------------------------------------------
+
+  private nextPlaceholder = 0;
+
+  createTorrent(filePath: string): string | null {
+    // Validate the path exists on disk.
+    if (!existsSync(filePath)) return null;
+
+    const name = path.basename(filePath);
+    const placeholder = `__create_${this.nextPlaceholder++}_${Date.now()}`;
+
+    const item: CreatedItem = {
+      id: placeholder,
+      name,
+      sourcePath: filePath,
+      magnet: "",
+      sizeBytes: 0,
+      status: "seeding",
+      uploadSpeed: 0,
+      uploaded: 0,
+      peers: 0,
+      createdAt: Date.now(),
+    };
+    this.created.set(placeholder, item);
+    this.changed();
+
+    this.engine.seed(placeholder, filePath, {
+      onSeed: (result) => {
+        // Remap from placeholder to real infoHash.
+        this.created.delete(placeholder);
+        item.id = result.infoHash;
+        item.magnet = result.magnetURI;
+        item.name = result.name || name;
+        item.sizeBytes = result.length;
+        this.created.set(item.id, item);
+        if (result.torrentFile) void saveTorrentMeta(item.id, result.torrentFile);
+        this.changed();
+        void this.persistCreated();
+      },
+      onError: (msg) => {
+        const c = this.created.get(placeholder);
+        if (c) {
+          c.status = "missing";
+          this.changed();
+          void this.persistCreated();
+        }
+      },
+    });
+
+    this.ensurePoll();
+    return placeholder;
+  }
+
+  getCreated(): CreatedItem[] {
+    return [...this.created.values()].sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  get createdCount(): number {
+    let n = 0;
+    for (const c of this.created.values()) if (c.status === "seeding") n++;
+    return n;
+  }
+
+  toggleCreatedPause(id: string): void {
+    const c = this.created.get(id);
+    if (!c) return;
+    if (c.status === "seeding") {
+      c.status = "paused";
+      c.uploadSpeed = 0;
+      c.peers = 0;
+      this.engine.remove(id);
+      this.maybeStopPoll();
+    } else if (c.status === "paused") {
+      c.status = "seeding";
+      this.engine.seed(id, c.sourcePath, {
+        onSeed: (result) => {
+          // Re-seed: remap if hash was under a different key.
+          if (result.infoHash !== id) {
+            this.created.delete(id);
+            this.engine.remove(id);
+            c.id = result.infoHash;
+            this.created.set(c.id, c);
+          }
+          c.magnet = result.magnetURI;
+          c.sizeBytes = result.length;
+          this.changed();
+          void this.persistCreated();
+        },
+        onError: () => {
+          c.status = "missing";
+          this.changed();
+          void this.persistCreated();
+        },
+      });
+      this.ensurePoll();
+    } else if (c.status === "missing") {
+      // Retry a missing entry.
+      if (!existsSync(c.sourcePath)) return;
+      c.status = "seeding";
+      this.engine.seed(id, c.sourcePath, {
+        onSeed: (result) => {
+          if (result.infoHash !== id) {
+            this.created.delete(id);
+            c.id = result.infoHash;
+            this.created.set(c.id, c);
+          }
+          c.magnet = result.magnetURI;
+          c.sizeBytes = result.length;
+          this.changed();
+          void this.persistCreated();
+        },
+        onError: () => {
+          c.status = "missing";
+          this.changed();
+          void this.persistCreated();
+        },
+      });
+      this.ensurePoll();
+    }
+    this.changed();
+    void this.persistCreated();
+  }
+
+  removeCreated(id: string): void {
+    if (!this.created.has(id)) return;
+    this.engine.remove(id);
+    this.created.delete(id);
+    this.changed();
+    void this.persistCreated();
+    this.maybeStopPoll();
+  }
+
+  restoreCreated(records: CreatedRecord[]): void {
+    for (const r of records) {
+      const item: CreatedItem = {
+        id: r.id,
+        name: r.name,
+        sourcePath: r.sourcePath,
+        magnet: r.magnet,
+        sizeBytes: r.sizeBytes,
+        status: r.status === "seeding" ? "seeding" : "paused",
+        uploadSpeed: 0,
+        uploaded: 0,
+        peers: 0,
+        createdAt: r.createdAt,
+      };
+      this.created.set(r.id, item);
+      if (r.status === "seeding") {
+        // Resume seeding — use stored .torrent if available, else re-hash.
+        const source = torrentMetaExists(r.id) ? torrentMetaPath(r.id) : r.sourcePath;
+        this.engine.seed(r.id, source, {
+          onSeed: (result) => {
+            if (result.infoHash !== r.id) {
+              this.created.delete(r.id);
+              item.id = result.infoHash;
+              this.created.set(item.id, item);
+            }
+            item.magnet = result.magnetURI;
+            item.sizeBytes = result.length;
+            this.changed();
+            void this.persistCreated();
+          },
+          onError: () => {
+            item.status = "missing";
+            this.changed();
+            void this.persistCreated();
+          },
+        });
+        this.ensurePoll();
+      }
+    }
+    this.changed();
+  }
+
+  private createdRecords(): CreatedRecord[] {
+    const out: CreatedRecord[] = [];
+    for (const c of this.created.values()) {
+      // Only persist items that have a real id (not placeholder).
+      if (c.id.startsWith("__create_")) continue;
+      out.push({
+        id: c.id,
+        name: c.name,
+        sourcePath: c.sourcePath,
+        magnet: c.magnet,
+        sizeBytes: c.sizeBytes,
+        status: c.status === "seeding" ? "seeding" : "paused",
+        createdAt: c.createdAt,
+      });
+    }
+    return out;
+  }
+
+  private persistCreated(): Promise<void> {
+    return saveCreated(this.createdRecords()).catch(() => {});
   }
 }

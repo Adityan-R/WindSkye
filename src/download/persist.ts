@@ -1,8 +1,8 @@
 import { promises as fs, mkdirSync, writeFileSync, renameSync, existsSync, rmSync } from "node:fs";
 import path from "node:path";
-import { queueFile, seedsFile, torrentsDir } from "../config/paths";
+import { queueFile, seedsFile, createdFile, torrentsDir } from "../config/paths";
 import { serializeWrites, writeJsonAtomic } from "../util/atomic";
-import type { QueueItem } from "./types";
+import type { QueueItem, CreatedItem } from "./types";
 
 const write = serializeWrites();
 
@@ -112,6 +112,56 @@ export async function loadSeeds(): Promise<SeedRecord[]> {
       }
     }
     return out;
+  } catch {
+    return [];
+  }
+}
+
+// --- user-created torrents --------------------------------------------------
+
+export interface CreatedRecord {
+  id: string;
+  name: string;
+  sourcePath: string;
+  magnet: string;
+  sizeBytes: number;
+  status: PersistedSeedStatus;
+  createdAt: number;
+}
+
+function isCreatedRecord(v: unknown): v is CreatedRecord {
+  if (!v || typeof v !== "object") return false;
+  const r = v as Record<string, unknown>;
+  return (
+    typeof r.id === "string" &&
+    typeof r.sourcePath === "string" &&
+    typeof r.name === "string"
+  );
+}
+
+export function saveCreated(records: CreatedRecord[]): Promise<void> {
+  return write(() => writeJsonAtomic(createdFile, records));
+}
+
+export function saveCreatedSync(records: CreatedRecord[]): void {
+  try {
+    mkdirSync(path.dirname(createdFile), { recursive: true });
+    const tmp = `${createdFile}.sync.tmp`;
+    writeFileSync(tmp, JSON.stringify(records, null, 2), "utf8");
+    renameSync(tmp, createdFile);
+  } catch {}
+}
+
+export async function loadCreated(): Promise<CreatedRecord[]> {
+  let raw: string;
+  try {
+    raw = await fs.readFile(createdFile, "utf8");
+  } catch {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter(isCreatedRecord) : [];
   } catch {
     return [];
   }

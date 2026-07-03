@@ -2,14 +2,14 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { Config } from "../config/config";
 import type { DownloadQueue } from "../download/queue";
 import type { HistoryItem } from "../download/history";
-import type { QueueItem, SeedItem } from "../download/types";
+import type { QueueItem, SeedItem, CreatedItem } from "../download/types";
 import type { SourceGroup, SourceId } from "../sources/types";
 
 export type View = "splash" | "browser";
 
 export type Category = "all" | "games" | "movies" | "tv" | "anime";
 
-export type Section = Category | "downloads" | "seeding";
+export type Section = Category | "downloads" | "seeding" | "create";
 
 export const CATEGORIES: { key: Category; label: string; group?: SourceGroup }[] = [
   { key: "all", label: "All" },
@@ -26,6 +26,8 @@ export type CaptureMode = "none" | "text" | "esc";
 export type DownloadFocus = "downloading" | "paused" | "failed" | "recent";
 
 export type SeedFocus = "seeding" | "paused" | "missing" | "idle";
+
+export type CreateFocus = "seeding" | "paused" | "missing" | null;
 
 export interface Store {
   config: Config;
@@ -48,6 +50,8 @@ export interface Store {
   setDownloadFocus: (f: DownloadFocus | null) => void;
   seedFocus: SeedFocus | null;
   setSeedFocus: (f: SeedFocus | null) => void;
+  createFocus: CreateFocus;
+  setCreateFocus: (f: CreateFocus) => void;
 
   startDownload: (input: {
     id: string;
@@ -141,4 +145,25 @@ export function useSeeds(queue: DownloadQueue): Map<string, SeedItem> {
     };
   }, [queue]);
   return seeds;
+}
+
+export function useCreatedItems(queue: DownloadQueue): CreatedItem[] {
+  const [items, setItems] = useState<CreatedItem[]>(() => queue.getCreated());
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onUpdate = (): void => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        setItems(queue.getCreated());
+      }, 200);
+    };
+    queue.on("update", onUpdate);
+    onUpdate();
+    return () => {
+      queue.off("update", onUpdate);
+      if (timer) clearTimeout(timer);
+    };
+  }, [queue]);
+  return items;
 }

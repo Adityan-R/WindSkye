@@ -1,4 +1,4 @@
-import type { DownloadFocus, Region, Section, SeedFocus } from "./store";
+import type { CreateFocus, DownloadFocus, Region, Section, SeedFocus } from "./store";
 
 export interface Hint {
   keys: string;
@@ -49,6 +49,15 @@ export const HELP_GROUPS: HelpGroup[] = [
       { keys: "c", label: "Remove from list" },
     ],
   },
+  {
+    title: "Create",
+    hints: [
+      { keys: "n", label: "New torrent from file/folder" },
+      { keys: "p", label: "Pause/resume" },
+      { keys: "c", label: "Remove" },
+      { keys: "y", label: "Copy magnet" },
+    ],
+  },
 ];
 
 // Footer labels stay terse so the contextual hint row never wraps; the `?`
@@ -64,6 +73,7 @@ export function footerHints(
   section: Section,
   downloadFocus?: DownloadFocus | null,
   seedFocus?: SeedFocus | null,
+  createFocus?: CreateFocus,
 ): Hint[] {
   if (region === "sidebar") {
     return [
@@ -78,6 +88,18 @@ export function footerHints(
     const label =
       seedFocus === "seeding" ? "Pause" : seedFocus === "missing" ? "Retry" : "Resume";
     return [{ keys: "p", label }, { keys: "c", label: "Remove" }, SWITCH, ALWAYS];
+  }
+  if (section === "create") {
+    const label =
+      createFocus === "seeding" ? "Pause" : createFocus === "missing" ? "Retry" : "Resume";
+    return [
+      { keys: "n", label: "New" },
+      { keys: "p", label },
+      { keys: "c", label: "Remove" },
+      { keys: "y", label: "Copy" },
+      SWITCH,
+      ALWAYS,
+    ];
   }
   if (section === "downloads") {
     if (downloadFocus === "paused") {

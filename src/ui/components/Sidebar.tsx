@@ -1,5 +1,5 @@
 import { Box, Text, useInput } from "ink";
-import { useStore, useQueueItems, CATEGORIES, type Section } from "../store";
+import { useStore, useQueueItems, useCreatedItems, CATEGORIES, type Section } from "../store";
 import { wrapStep } from "../move";
 import { ACCENT_RAMP, COLOR, GUTTER, ICON, RULE } from "../theme";
 
@@ -15,9 +15,10 @@ const FILTERS: NavItem[] = CATEGORIES.map((c) => ({
 const LIBRARY: NavItem[] = [
   { key: "downloads", label: "Downloads" },
   { key: "seeding", label: "Seeding" },
+  { key: "create", label: "Create" },
 ];
 
-const BADGED = (key: Section): boolean => key === "downloads" || key === "seeding";
+const BADGED = (key: Section): boolean => key === "downloads" || key === "seeding" || key === "create";
 
 const GROUPS: NavItem[][] = [FILTERS, LIBRARY];
 
@@ -33,8 +34,10 @@ export function Sidebar() {
   const focused = region === "sidebar";
   const idx = Math.max(0, NAV.findIndex((n) => n.key === section));
   useQueueItems(queue);
+  useCreatedItems(queue);
   const active = queue.activeCount;
   const seeding = queue.seedingCount;
+  const creating = queue.createdCount;
 
   useInput(
     (input, key) => {
@@ -67,7 +70,7 @@ export function Sidebar() {
                   {item.label}
                 </Text>
                 {(() => {
-                  const n = item.key === "downloads" ? active : item.key === "seeding" ? seeding : 0;
+                  const n = item.key === "downloads" ? active : item.key === "seeding" ? seeding : item.key === "create" ? creating : 0;
                   return n > 0 ? (
                     <Box flexShrink={0}>
                       <Text color={COLOR.dim}>{` (${n})`}</Text>

@@ -4,7 +4,7 @@ import { promises as fs } from "node:fs";
 import { loadConfig, saveConfig, type Config } from "../config/config";
 import { normalizeDownloadDir } from "../config/folder";
 import { DownloadQueue } from "../download/queue";
-import { loadQueue, loadSeeds } from "../download/persist";
+import { loadQueue, loadSeeds, loadCreated } from "../download/persist";
 import { loadHistory } from "../download/history";
 import { reconcileQueue } from "../download/reconcile";
 import { parseMagnet } from "../sources/magnet";
@@ -14,6 +14,7 @@ import { cleanText, truncate } from "../util/format";
 import {
   StoreContext,
   type CaptureMode,
+  type CreateFocus,
   type DownloadFocus,
   type Region,
   type Section,
@@ -29,6 +30,7 @@ import { HelpOverlay } from "./components/HelpOverlay";
 import { Results } from "./components/Results";
 import { Downloads } from "./components/Downloads";
 import { Seeding } from "./components/Seeding";
+import { Create } from "./components/Create";
 import { Spinner } from "./components/Spinner";
 import { TabTitle } from "./components/TabTitle";
 import { Splash } from "./views/Splash";
@@ -81,6 +83,7 @@ export function App({
   const [captureMode, setCaptureMode] = useState<CaptureMode>("none");
   const [downloadFocus, setDownloadFocus] = useState<DownloadFocus | null>(null);
   const [seedFocus, setSeedFocus] = useState<SeedFocus | null>(null);
+  const [createFocus, setCreateFocus] = useState<CreateFocus>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [editingFolder, setEditingFolder] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -96,6 +99,7 @@ export function App({
       q.restore(reconcileQueue(await loadQueue()));
       q.restoreHistory(await loadHistory());
       q.restoreSeeds(await loadSeeds());
+      q.restoreCreated(await loadCreated());
       if (!alive) {
         q.suspend();
         return;
@@ -286,6 +290,8 @@ export function App({
       setDownloadFocus,
       seedFocus,
       setSeedFocus,
+      createFocus,
+      setCreateFocus,
       startDownload,
       copyMagnet,
       notice,
@@ -310,6 +316,7 @@ export function App({
     captureMode,
     downloadFocus,
     seedFocus,
+    createFocus,
     startDownload,
     copyMagnet,
     notice,
@@ -432,6 +439,8 @@ export function App({
               <Downloads />
             ) : section === "seeding" ? (
               <Seeding />
+            ) : section === "create" ? (
+              <Create />
             ) : (
               <Results />
             )}
@@ -440,7 +449,7 @@ export function App({
 
         {showFooter ? (
           <Box display={showHelp || editingFolder ? "none" : "flex"}>
-            <Footer hints={footerHints(region, section, downloadFocus, seedFocus)} />
+            <Footer hints={footerHints(region, section, downloadFocus, seedFocus, createFocus)} />
           </Box>
         ) : null}
       </Box>

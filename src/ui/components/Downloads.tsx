@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { useStore, useQueueItems, useQueueHistory, type DownloadFocus } from "../store";
+import { useStore, useQueueItems, useQueueHistory, type DownloadFocus, type CaptureMode } from "../store";
 import { Panel } from "./Panel";
 import { ProgressBar } from "./ProgressBar";
 import { wrapStep, windowStart } from "../move";
@@ -44,7 +44,7 @@ function rightStats(it: QueueItem): string {
 }
 
 export function Downloads() {
-  const { queue, region, contentWidth, listRows, startDownload, setDownloadFocus } = useStore();
+  const { queue, region, contentWidth, listRows, startDownload, setDownloadFocus, setCaptureMode } = useStore();
   const active = useQueueItems(queue);
   const recent = useQueueHistory(queue);
   const focused = region === "content";
@@ -55,6 +55,15 @@ export function Downloads() {
   const inActive = clamped < active.length;
   const recentCursor = clamped - active.length;
 
+  const [canceling, setCanceling] = useState<QueueItem | null>(null);
+  const [cancelOption, setCancelOption] = useState<"yes" | "no">("no");
+
+  useEffect(() => {
+    setCaptureMode(canceling ? "text" : "none");
+    if (canceling) setCancelOption("no"); // Default to no for destructive action
+    return () => setCaptureMode("none");
+  }, [canceling, setCaptureMode]);
+
   useInput(
     (input, key) => {
       if (key.upArrow || input === "k") setCursor(wrapStep(clamped, -1, total));
@@ -64,8 +73,9 @@ export function Downloads() {
       else if (inActive) {
         const it = active[clamped];
         if (!it) return;
-        if (input === "c") queue.cancel(it.id);
-        else if (input === "p") queue.togglePause(it.id);
+        if (input === "c") {
+          setCanceling(it);
+        } else if (input === "p") queue.togglePause(it.id);
       } else {
         const h = recent[recentCursor];
         if (!h) return;
@@ -80,7 +90,27 @@ export function Downloads() {
         else if (input === "c") queue.removeHistory(h.id);
       }
     },
-    { isActive: focused && total > 0 },
+    { isActive: focused && total > 0 && !canceling },
+  );
+
+  useInput(
+    (input, key) => {
+      if (!canceling) return;
+      if (key.escape || input.toLowerCase() === "n") {
+        setCanceling(null);
+      } else if (input.toLowerCase() === "y") {
+        queue.cancel(canceling.id);
+        setCanceling(null);
+      } else if (key.leftArrow || key.rightArrow || input === "h" || input === "l") {
+        setCancelOption((prev) => (prev === "yes" ? "no" : "yes"));
+      } else if (key.return) {
+        if (cancelOption === "yes") {
+          queue.cancel(canceling.id);
+        }
+        setCanceling(null);
+      }
+    },
+    { isActive: !!canceling },
   );
 
   let focusKind: DownloadFocus | null = null;
@@ -97,6 +127,44 @@ export function Downloads() {
   }, [focusKind, setDownloadFocus]);
 
   const panelH = Math.max(5, listRows - 1);
+
+  if (canceling) {
+    return (
+      <Box width={contentWidth} height={panelH} justifyContent="center" alignItems="center">
+        <Box
+          flexDirection="column"
+          borderStyle="single"
+          borderColor={COLOR.accent}
+          paddingX={2}
+          paddingY={1}
+        >
+          <Box justifyContent="center" marginBottom={1}>
+            <Text color={COLOR.accent} bold>Cancel Download</Text>
+          </Box>
+          <Box justifyContent="center">
+            <Text color={COLOR.text}>Are you sure you want to cancel this download?</Text>
+          </Box>
+          <Box justifyContent="center" marginBottom={1}>
+            <Text color={COLOR.dim}>{truncate(cleanText(canceling.name), 40)}</Text>
+          </Box>
+          <Box justifyContent="center" gap={4}>
+            <Text
+              color={cancelOption === "yes" ? COLOR.bg : COLOR.text}
+              backgroundColor={cancelOption === "yes" ? COLOR.accent : undefined}
+            >
+              {" [Yes] "}
+            </Text>
+            <Text
+              color={cancelOption === "no" ? COLOR.bg : COLOR.text}
+              backgroundColor={cancelOption === "no" ? COLOR.accent : undefined}
+            >
+              {" [No] "}
+            </Text>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
 
   if (total === 0) {
     return (

@@ -23,6 +23,7 @@ export const ICON = {
   up: "↑",
   peer: "•",
   pause: "⏸",
+  create: "+",
 } as const;
 
 export const RULE = "#6b6577";
