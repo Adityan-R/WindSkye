@@ -9,6 +9,11 @@ export const COLOR = {
   bad: "#ee7d92",
   bright: "#bfdbfe",
   dim: "#6b7280",
+  logoHighlight: "#dbeafe",
+  logoTop: "#93c5fd",
+  logoMid: "#3b82f6",
+  logoBase: "#2563eb",
+  logoShade: "#1d4ed8",
 };
 
 export const ICON = {
@@ -53,6 +58,11 @@ const THEMES: Record<string, typeof COLOR> = {
     bad: "#ee7d92",
     bright: "#bfdbfe",
     dim: "#6b7280",
+    logoHighlight: "#dbeafe",
+    logoTop: "#93c5fd",
+    logoMid: "#3b82f6",
+    logoBase: "#2563eb",
+    logoShade: "#1d4ed8",
   },
   dracula: {
     accent: "#bd93f9",
@@ -63,6 +73,11 @@ const THEMES: Record<string, typeof COLOR> = {
     bad: "#ff5555",
     bright: "#d6acff",
     dim: "#6272a4",
+    logoHighlight: "#e2c5ff",
+    logoTop: "#d6acff",
+    logoMid: "#bd93f9",
+    logoBase: "#9d65ff",
+    logoShade: "#7b32ff",
   },
   nord: {
     accent: "#88c0d0",
@@ -73,6 +88,11 @@ const THEMES: Record<string, typeof COLOR> = {
     bad: "#bf616a",
     bright: "#e5e9f0",
     dim: "#4c566a",
+    logoHighlight: "#eceff4",
+    logoTop: "#e5e9f0",
+    logoMid: "#88c0d0",
+    logoBase: "#81a1c1",
+    logoShade: "#5e81ac",
   },
   light: {
     accent: "#2563eb",
@@ -83,6 +103,11 @@ const THEMES: Record<string, typeof COLOR> = {
     bad: "#dc2626",
     bright: "#1d4ed8",
     dim: "#94a3b8",
+    logoHighlight: "#60a5fa",
+    logoTop: "#3b82f6",
+    logoMid: "#2563eb",
+    logoBase: "#1d4ed8",
+    logoShade: "#1e40af",
   },
 };
 

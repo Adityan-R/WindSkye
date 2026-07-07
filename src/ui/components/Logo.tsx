@@ -3,7 +3,10 @@ import { LOGO_LINES, SPROUT_CELLS } from "../logo";
 import { COLOR, lerpHex } from "../theme";
 
 function getSheen(t: number): string {
-  return lerpHex(COLOR.bright, COLOR.accent, Math.min(1, Math.max(0, t)));
+  if (t < 0.15) return lerpHex(COLOR.logoHighlight, COLOR.logoTop, t / 0.15);
+  if (t < 0.4) return lerpHex(COLOR.logoTop, COLOR.logoMid, (t - 0.15) / 0.25);
+  if (t < 0.7) return lerpHex(COLOR.logoMid, COLOR.logoBase, (t - 0.4) / 0.3);
+  return lerpHex(COLOR.logoBase, COLOR.logoShade, (t - 0.7) / 0.3);
 }
 
 export function Logo() {
