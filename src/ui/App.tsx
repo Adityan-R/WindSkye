@@ -88,6 +88,8 @@ export function App({
   const [showHelp, setShowHelp] = useState(false);
   const [editingFolder, setEditingFolder] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [exitPrompt, setExitPrompt] = useState(false);
+  const exitTimer = useRef<NodeJS.Timeout | null>(null);
   const booting = useRef(false);
 
   useEffect(() => {
@@ -339,8 +341,24 @@ export function App({
   useInput(
     (input, key) => {
       if (key.ctrl && input === "c") {
-        quitAll();
+        if (exitPrompt) {
+          quitAll();
+        } else {
+          setExitPrompt(true);
+          if (exitTimer.current) clearTimeout(exitTimer.current);
+          exitTimer.current = setTimeout(() => {
+            setExitPrompt(false);
+            exitTimer.current = null;
+          }, 1000);
+        }
         return;
+      }
+      if (exitPrompt) {
+        setExitPrompt(false);
+        if (exitTimer.current) {
+          clearTimeout(exitTimer.current);
+          exitTimer.current = null;
+        }
       }
       if (editingFolder) return; // the folder prompt owns input (its own esc + enter)
       if (captureMode === "text") return;
@@ -456,7 +474,13 @@ export function App({
           </Box>
         </Box>
 
-        {showFooter ? (
+        {exitPrompt ? (
+          <Box display={showHelp || editingFolder ? "none" : "flex"} paddingX={1} justifyContent="center">
+            <Text color={COLOR.warn} bold>
+              Press Ctrl+C again to exit.
+            </Text>
+          </Box>
+        ) : showFooter ? (
           <Box display={showHelp || editingFolder ? "none" : "flex"}>
             <Footer hints={footerHints(region, section, downloadFocus, seedFocus, createFocus)} />
           </Box>
