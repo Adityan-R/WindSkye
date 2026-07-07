@@ -9,7 +9,7 @@ export const COLOR = {
   bad: "#ee7d92",
   bright: "#bfdbfe",
   dim: "#6b7280",
-} as const;
+};
 
 export const ICON = {
   done: "✓",
@@ -43,6 +43,62 @@ export const SOURCE_STYLE: Record<SourceId, { tag: string; color: string }> = {
   "x1337-tv": { tag: "1337", color: "#f6a55c" },
 };
 
+const THEMES: Record<string, typeof COLOR> = {
+  default: {
+    accent: "#60a5fa",
+    text: "#f8fafc",
+    alt: "#93c5fd",
+    good: "#86d6a2",
+    warn: "#f0c560",
+    bad: "#ee7d92",
+    bright: "#bfdbfe",
+    dim: "#6b7280",
+  },
+  dracula: {
+    accent: "#bd93f9",
+    text: "#f8f8f2",
+    alt: "#ff79c6",
+    good: "#50fa7b",
+    warn: "#f1fa8c",
+    bad: "#ff5555",
+    bright: "#d6acff",
+    dim: "#6272a4",
+  },
+  nord: {
+    accent: "#88c0d0",
+    text: "#eceff4",
+    alt: "#8fbcbb",
+    good: "#a3be8c",
+    warn: "#ebcb8b",
+    bad: "#bf616a",
+    bright: "#e5e9f0",
+    dim: "#4c566a",
+  },
+  light: {
+    accent: "#2563eb",
+    text: "#0f172a",
+    alt: "#3b82f6",
+    good: "#16a34a",
+    warn: "#d97706",
+    bad: "#dc2626",
+    bright: "#1d4ed8",
+    dim: "#94a3b8",
+  },
+};
+
+export const AVAILABLE_THEMES = Object.keys(THEMES);
+
+export function applyTheme(name: string): void {
+  const palette = THEMES[name] || THEMES.default;
+  Object.assign(COLOR, palette);
+  ACCENT_RAMP[0] = COLOR.accent;
+  ACCENT_RAMP[1] = COLOR.bright;
+  SOURCE_STYLE.fitgirl.color = COLOR.accent;
+  SOURCE_STYLE.yts.color = COLOR.good;
+  SOURCE_STYLE.eztv.color = COLOR.warn;
+  SOURCE_STYLE.nyaa.color = COLOR.bright;
+}
+
 function rgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -58,4 +114,4 @@ export function lerpHex(a: string, b: string, t: number): string {
   return `#${c(ar, br)}${c(ag, bg)}${c(ab, bb)}`;
 }
 
-export const ACCENT_RAMP: readonly [string, string] = [COLOR.accent, COLOR.bright];
+export const ACCENT_RAMP: [string, string] = [COLOR.accent, COLOR.bright];

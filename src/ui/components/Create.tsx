@@ -176,13 +176,13 @@ export function Create() {
           </Box>
           <Box justifyContent="center" gap={4}>
             <Text
-              color={cancelOption === "yes" ? COLOR.bg : COLOR.text}
+              color={cancelOption === "yes" ? "black" : COLOR.text}
               backgroundColor={cancelOption === "yes" ? COLOR.accent : undefined}
             >
               {" [Yes] "}
             </Text>
             <Text
-              color={cancelOption === "no" ? COLOR.bg : COLOR.text}
+              color={cancelOption === "no" ? "black" : COLOR.text}
               backgroundColor={cancelOption === "no" ? COLOR.accent : undefined}
             >
               {" [No] "}

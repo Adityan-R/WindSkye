@@ -2,18 +2,8 @@ import { Box, Text } from "ink";
 import { LOGO_LINES, SPROUT_CELLS } from "../logo";
 import { COLOR, lerpHex } from "../theme";
 
-const HIGHLIGHT = "#dbeafe";
-const TOP = "#93c5fd";
-const MID = "#3b82f6";
-const BASE = "#2563eb";
-const SHADE = "#1d4ed8";
-const SPROUT_COLOR = "#38bdf8";
-
 function getSheen(t: number): string {
-  if (t < 0.15) return lerpHex(HIGHLIGHT, TOP, t / 0.15);
-  if (t < 0.4) return lerpHex(TOP, MID, (t - 0.15) / 0.25);
-  if (t < 0.7) return lerpHex(MID, BASE, (t - 0.4) / 0.3);
-  return lerpHex(BASE, SHADE, (t - 0.7) / 0.3);
+  return lerpHex(COLOR.bright, COLOR.accent, Math.min(1, Math.max(0, t)));
 }
 
 export function Logo() {
@@ -35,7 +25,7 @@ export function Logo() {
 
               if (SPROUT_CELLS.has(`${row},${i}`)) {
                 return (
-                  <Text key={i} bold color={SPROUT_COLOR}>
+                  <Text key={i} bold color={COLOR.good}>
                     {ch}
                   </Text>
                 );

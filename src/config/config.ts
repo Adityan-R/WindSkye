@@ -4,10 +4,18 @@ import { serializeWrites, writeJsonAtomic } from "../util/atomic";
 
 export interface Config {
   downloadDir: string;
+  theme: string;
+  maxConns: number;
+  downloadLimit: number;
+  uploadLimit: number;
 }
 
 export const defaultConfig: Config = {
   downloadDir: defaultDownloadDir,
+  theme: "default",
+  maxConns: 55,
+  downloadLimit: 0,
+  uploadLimit: 0,
 };
 
 export async function loadConfig(): Promise<Config> {
@@ -23,6 +31,10 @@ export async function loadConfig(): Promise<Config> {
     if (!cfg.downloadDir || typeof cfg.downloadDir !== "string") {
       cfg.downloadDir = defaultDownloadDir;
     }
+    if (typeof cfg.theme !== "string") cfg.theme = defaultConfig.theme;
+    if (typeof cfg.maxConns !== "number") cfg.maxConns = defaultConfig.maxConns;
+    if (typeof cfg.downloadLimit !== "number") cfg.downloadLimit = defaultConfig.downloadLimit;
+    if (typeof cfg.uploadLimit !== "number") cfg.uploadLimit = defaultConfig.uploadLimit;
     return cfg;
   } catch {
     return { ...defaultConfig };

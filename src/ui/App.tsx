@@ -31,12 +31,13 @@ import { Results } from "./components/Results";
 import { Downloads } from "./components/Downloads";
 import { Seeding } from "./components/Seeding";
 import { Create } from "./components/Create";
+import { Settings } from "./components/Settings";
 import { Spinner } from "./components/Spinner";
 import { TabTitle } from "./components/TabTitle";
 import { Splash } from "./views/Splash";
 import { FolderPrompt } from "./components/FolderPrompt";
 import { footerHints } from "./keymap";
-import { COLOR, ICON } from "./theme";
+import { COLOR, ICON, applyTheme } from "./theme";
 import { useMouseWheel } from "./hooks/useMouseWheel";
 import type { SourceId } from "../sources/types";
 
@@ -270,8 +271,14 @@ export function App({
   const contentWidth = Math.max(24, cols - RAIL_WIDTH - 3);
   const ruleWidth = Math.max(10, cols - 2);
 
-  const store: Store | null = useMemo(() => {
+    const store: Store | null = useMemo(() => {
     if (!queue || !config) return null;
+    applyTheme(config.theme);
+    queue.applyConfig({
+      maxConns: config.maxConns,
+      downloadLimit: config.downloadLimit,
+      uploadLimit: config.uploadLimit,
+    });
     return {
       config,
       setConfig,
@@ -441,6 +448,8 @@ export function App({
               <Seeding />
             ) : section === "create" ? (
               <Create />
+            ) : section === "settings" ? (
+              <Settings />
             ) : (
               <Results />
             )}

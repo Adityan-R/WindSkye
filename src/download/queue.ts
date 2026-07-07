@@ -60,6 +60,10 @@ export class DownloadQueue extends EventEmitter {
   private strayHits = new Map<string, number>();
   private seedStartedAt = new Map<string, number>();
 
+  applyConfig(config: { maxConns: number; downloadLimit: number; uploadLimit: number }): void {
+    this.engine.setConfig(config.maxConns, config.downloadLimit, config.uploadLimit);
+  }
+
   getItems(): QueueItem[] {
     return [...this.items.values()].sort((a, b) => b.addedAt - a.addedAt);
   }

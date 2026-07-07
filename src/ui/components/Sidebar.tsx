@@ -16,6 +16,7 @@ const LIBRARY: NavItem[] = [
   { key: "downloads", label: "Downloads" },
   { key: "seeding", label: "Seeding" },
   { key: "create", label: "Create" },
+  { key: "settings", label: "Settings" },
 ];
 
 const BADGED = (key: Section): boolean => key === "downloads" || key === "seeding" || key === "create";

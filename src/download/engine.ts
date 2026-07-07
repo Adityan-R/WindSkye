@@ -57,10 +57,25 @@ function message(e: unknown): string {
 export class TorrentEngine {
   private client: WebTorrent | null = null;
   private torrents = new Map<string, Torrent>();
+  private maxConns: number = 55;
+  private downloadLimit: number = 0;
+  private uploadLimit: number = 0;
+
+  setConfig(maxConns: number, downloadLimit: number, uploadLimit: number): void {
+    this.maxConns = maxConns;
+    this.downloadLimit = downloadLimit;
+    this.uploadLimit = uploadLimit;
+    // We cannot easily recreate the client mid-download without dropping connections,
+    // so config changes to the engine will take effect on next restart.
+  }
 
   private ensureClient(): WebTorrent {
     if (!this.client) {
-      this.client = new WebTorrent();
+      this.client = new WebTorrent({
+        maxConns: this.maxConns,
+        downloadLimit: this.downloadLimit || undefined,
+        uploadLimit: this.uploadLimit || undefined,
+      } as any);
       this.client.on("error", () => {});
     }
     return this.client;
