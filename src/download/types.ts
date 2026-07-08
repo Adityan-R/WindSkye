@@ -1,6 +1,6 @@
 import type { SourceId } from "../sources/types";
 
-export type DownloadStatus = "downloading" | "paused" | "completed" | "failed";
+export type DownloadStatus = "downloading" | "paused" | "completed" | "failed" | "selecting_files";
 
 export type SeedStatus = "seeding" | "paused" | "missing";
 
@@ -46,4 +46,7 @@ export interface QueueItem {
   files?: number;
   error?: string;
   addedAt: number;
+  selectedFiles?: number[];
+  sequential?: boolean;
+  fileList?: { name: string; length: number; path: string }[];
 }

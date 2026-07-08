@@ -15,7 +15,7 @@ export interface TorrentProgress {
 export interface TorrentMeta {
   name: string;
   total: number;
-  files: number;
+  files: { name: string; length: number; path: string }[];
   // The .torrent metadata (piece hashes), available once metadata arrives. We
   // persist it so a later re-seed can verify the on-disk file without having to
   // re-fetch metadata from the swarm (which a bare magnet would require).
@@ -84,7 +84,7 @@ export class TorrentEngine {
   // `source` is a magnet URI, an infoHash, or a path to a .torrent file. Seeding
   // an existing file passes the stored .torrent path so webtorrent can verify it
   // locally instead of re-fetching metadata from the swarm.
-  add(id: string, source: string, dir: string, handlers: AddHandlers): void {
+  add(id: string, source: string, dir: string, handlers: AddHandlers, options?: { selectedFiles?: number[], sequential?: boolean }): void {
     const client = this.ensureClient();
     const existing = this.torrents.get(id);
     if (existing) {
@@ -96,7 +96,7 @@ export class TorrentEngine {
 
     let torrent: Torrent;
     try {
-      torrent = client.add(source, { path: dir });
+      torrent = client.add(source, { path: dir, strategy: options?.sequential ? "sequential" : undefined });
     } catch (e) {
       handlers.onError?.(message(e));
       return;
@@ -104,10 +104,19 @@ export class TorrentEngine {
     this.torrents.set(id, torrent);
 
     torrent.on("metadata", () => {
+      if (options?.selectedFiles) {
+         torrent.files.forEach((f, i) => {
+             if (options.selectedFiles!.includes(i)) f.select();
+             else f.deselect();
+         });
+      } else {
+         // Fresh magnet fetch: deselect all so pieces aren't downloaded until user selects
+         torrent.files.forEach(f => f.deselect());
+      }
       handlers.onMetadata?.({
         name: torrent.name,
         total: torrent.length,
-        files: torrent.files?.length ?? 0,
+        files: torrent.files.map(f => ({ name: f.name, length: f.length, path: f.path })),
         torrentFile: torrent.torrentFile,
       });
     });

@@ -19,6 +19,7 @@ export const HELP_GROUPS: HelpGroup[] = [
       { keys: "tab", label: "Switch pane" },
       { keys: "esc", label: "Back" },
       { keys: "o", label: "Download folder" },
+      { keys: "t", label: "Browse .torrent" },
       { keys: "q", label: "Quit" },
     ],
   },
@@ -37,6 +38,7 @@ export const HELP_GROUPS: HelpGroup[] = [
     hints: [
       { keys: "p", label: "Pause/resume" },
       { keys: "c", label: "Cancel or remove from list" },
+      { keys: "e", label: "Open in system explorer" },
       { keys: "f", label: "Retry failed" },
       { keys: "d", label: "Download again" },
       { keys: "x", label: "Clear recent" },
@@ -67,6 +69,7 @@ const NAVIGATE: Hint = { keys: "↑↓←→", label: "Move" };
 const ALWAYS: Hint = { keys: "?", label: "Keys" };
 
 const SWITCH: Hint = { keys: "tab", label: "Switch" };
+const T_HINT: Hint = { keys: "t", label: ".torrent" };
 
 export function footerHints(
   region: Region,
@@ -79,6 +82,7 @@ export function footerHints(
     return [
       NAVIGATE,
       { keys: "↵", label: "Open" },
+      T_HINT,
       SWITCH,
       ALWAYS,
       { keys: "q", label: "Quit" },
@@ -87,7 +91,7 @@ export function footerHints(
   if (section === "seeding") {
     const label =
       seedFocus === "seeding" ? "Pause" : seedFocus === "missing" ? "Retry" : "Resume";
-    return [{ keys: "p", label }, { keys: "c", label: "Remove" }, SWITCH, ALWAYS];
+    return [{ keys: "p", label }, { keys: "c", label: "Remove" }, T_HINT, SWITCH, ALWAYS];
   }
   if (section === "create") {
     const label =
@@ -97,32 +101,37 @@ export function footerHints(
       { keys: "p", label },
       { keys: "c", label: "Remove" },
       { keys: "y", label: "Copy" },
+      T_HINT,
       SWITCH,
       ALWAYS,
     ];
   }
   if (section === "downloads") {
     if (downloadFocus === "paused") {
-      return [{ keys: "p", label: "Resume" }, { keys: "c", label: "Cancel" }, SWITCH, ALWAYS];
+      return [{ keys: "p", label: "Resume" }, { keys: "c", label: "Cancel" }, T_HINT, SWITCH, ALWAYS];
     }
     if (downloadFocus === "failed") {
-      return [{ keys: "f", label: "Retry" }, { keys: "c", label: "Remove" }, SWITCH, ALWAYS];
+      return [{ keys: "f", label: "Retry" }, { keys: "c", label: "Remove" }, T_HINT, SWITCH, ALWAYS];
     }
     if (downloadFocus === "recent") {
       return [
         NAVIGATE,
+        { keys: "e", label: "Explorer" },
         { keys: "d", label: "Download again" },
         { keys: "c", label: "Remove" },
         { keys: "x", label: "Clear" },
+        T_HINT,
         SWITCH,
         ALWAYS,
       ];
     }
-    return [{ keys: "p", label: "Pause" }, { keys: "c", label: "Cancel" }, SWITCH, ALWAYS];
+    return [{ keys: "e", label: "Explorer" }, { keys: "p", label: "Pause" }, { keys: "c", label: "Cancel" }, T_HINT, SWITCH, ALWAYS];
   }
   return [
     NAVIGATE,
     { keys: "d", label: "Download" },
+    T_HINT,
+    { keys: "e", label: "Explorer" },
     { keys: "y", label: "Copy" },
     { keys: "s", label: "Sort" },
     { keys: "/", label: "Search" },

@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
+import path from "node:path";
 import { useStore, useQueueItems, useQueueHistory, type DownloadFocus, type CaptureMode } from "../store";
+import { openFileExplorer } from "../../util/open";
+import { FileSelection } from "./FileSelection";
 import { Panel } from "./Panel";
 import { ProgressBar } from "./ProgressBar";
 import { wrapStep, windowStart } from "../move";
@@ -58,11 +61,13 @@ export function Downloads() {
   const [canceling, setCanceling] = useState<QueueItem | null>(null);
   const [cancelOption, setCancelOption] = useState<"yes" | "no">("no");
 
+  const isSelecting = active.find((it) => it.status === "selecting_files");
+
   useEffect(() => {
-    setCaptureMode(canceling ? "text" : "none");
+    setCaptureMode(canceling || isSelecting ? "text" : "none");
     if (canceling) setCancelOption("no"); // Default to no for destructive action
     return () => setCaptureMode("none");
-  }, [canceling, setCaptureMode]);
+  }, [canceling, !!isSelecting, setCaptureMode]);
 
   useInput(
     (input, key) => {
@@ -76,6 +81,7 @@ export function Downloads() {
         if (input === "c") {
           setCanceling(it);
         } else if (input === "p") queue.togglePause(it.id);
+        else if (input === "e") openFileExplorer(path.join(it.dir, it.name));
       } else {
         const h = recent[recentCursor];
         if (!h) return;
@@ -88,9 +94,10 @@ export function Downloads() {
             sizeBytes: h.sizeBytes,
           });
         else if (input === "c") queue.removeHistory(h.id);
+        else if (input === "e") openFileExplorer(path.join(h.dir, h.name));
       }
     },
-    { isActive: focused && total > 0 && !canceling },
+    { isActive: focused && total > 0 && !canceling && !isSelecting },
   );
 
   useInput(
@@ -127,6 +134,18 @@ export function Downloads() {
   }, [focusKind, setDownloadFocus]);
 
   const panelH = Math.max(5, listRows - 1);
+
+  if (isSelecting) {
+    return (
+      <FileSelection
+        item={isSelecting}
+        contentWidth={contentWidth}
+        listRows={listRows}
+        onConfirm={(indices, seq) => queue.commitSelection(isSelecting.id, indices, seq)}
+        onCancel={() => queue.cancel(isSelecting.id)}
+      />
+    );
+  }
 
   if (canceling) {
     return (

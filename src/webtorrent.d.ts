@@ -5,6 +5,8 @@ declare module "webtorrent" {
     name: string;
     path: string;
     length: number;
+    select(): void;
+    deselect(): void;
   }
 
   interface Torrent extends EventEmitter {
@@ -36,6 +38,7 @@ declare module "webtorrent" {
     name?: string;
     createdBy?: string;
     announce?: string[];
+    strategy?: string;
   }
 
   interface WebTorrentOptions {

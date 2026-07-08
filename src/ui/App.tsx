@@ -36,7 +36,9 @@ import { Spinner } from "./components/Spinner";
 import { TabTitle } from "./components/TabTitle";
 import { Splash } from "./views/Splash";
 import { FolderPrompt } from "./components/FolderPrompt";
+import { FileBrowser } from "./components/FileBrowser";
 import { footerHints } from "./keymap";
+import { openFileExplorer } from "../util/open";
 import { COLOR, ICON, applyTheme } from "./theme";
 import { useMouseWheel } from "./hooks/useMouseWheel";
 import type { SourceId } from "../sources/types";
@@ -87,6 +89,7 @@ export function App({
   const [createFocus, setCreateFocus] = useState<CreateFocus>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [editingFolder, setEditingFolder] = useState(false);
+  const [pickingTorrent, setPickingTorrent] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [exitPrompt, setExitPrompt] = useState(false);
   const exitTimer = useRef<NodeJS.Timeout | null>(null);
@@ -301,6 +304,8 @@ export function App({
       setSeedFocus,
       createFocus,
       setCreateFocus,
+      pickingTorrent,
+      setPickingTorrent,
       startDownload,
       copyMagnet,
       notice,
@@ -326,6 +331,7 @@ export function App({
     downloadFocus,
     seedFocus,
     createFocus,
+    pickingTorrent,
     startDownload,
     copyMagnet,
     notice,
@@ -360,7 +366,7 @@ export function App({
           exitTimer.current = null;
         }
       }
-      if (editingFolder) return; // the folder prompt owns input (its own esc + enter)
+      if (editingFolder || pickingTorrent) return; // the prompts own input
       if (captureMode === "text") return;
       if (showHelp) {
         setShowHelp(false);
@@ -373,6 +379,16 @@ export function App({
       if (input === "o") {
         setShowHelp(false);
         setEditingFolder(true);
+        return;
+      }
+      if (input === "e") {
+        setShowHelp(false);
+        if (store) openFileExplorer(store.config.downloadDir);
+        return;
+      }
+      if (input === "t") {
+        setShowHelp(false);
+        setPickingTorrent(true);
         return;
       }
       if (input === "m") {
@@ -452,10 +468,31 @@ export function App({
           </Box>
         ) : null}
 
+        {pickingTorrent ? (
+          <Box marginTop={1} display={showHelp ? "none" : "flex"}>
+            <FileBrowser
+              width={Math.max(24, Math.min(cols - 4, 80))}
+              height={Math.max(10, Math.min(rows - 6, 20))}
+              onSelect={(filepath) => {
+                setPickingTorrent(false);
+                void magnetFromTorrentFile(filepath).then(magnet => {
+                  if (magnet) {
+                    startDownload({ id: magnet.infoHash, name: magnet.name, magnet: magnet.magnet });
+                    setView("browser");
+                  } else {
+                    setNotice("Invalid or corrupt .torrent file");
+                  }
+                });
+              }}
+              onCancel={() => setPickingTorrent(false)}
+            />
+          </Box>
+        ) : null}
+
         <Box
           height={bodyH}
           marginTop={compact ? 0 : 1}
-          display={showHelp || editingFolder ? "none" : "flex"}
+          display={showHelp || editingFolder || pickingTorrent ? "none" : "flex"}
           overflow="hidden"
         >
           <Sidebar />
@@ -475,13 +512,13 @@ export function App({
         </Box>
 
         {exitPrompt ? (
-          <Box display={showHelp || editingFolder ? "none" : "flex"} paddingX={1} justifyContent="center">
+          <Box display={showHelp || editingFolder || pickingTorrent ? "none" : "flex"} paddingX={1} justifyContent="center">
             <Text color={COLOR.warn} bold>
               Press Ctrl+C again to exit.
             </Text>
           </Box>
         ) : showFooter ? (
-          <Box display={showHelp || editingFolder ? "none" : "flex"}>
+          <Box display={showHelp || editingFolder || pickingTorrent ? "none" : "flex"}>
             <Footer hints={footerHints(region, section, downloadFocus, seedFocus, createFocus)} />
           </Box>
         ) : null}

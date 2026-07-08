@@ -112,7 +112,11 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private startEngine(item: QueueItem): void {
-    this.engine.add(item.id, item.magnet, item.dir, this.engineHandlers(item.id));
+    const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
+    this.engine.add(item.id, source, item.dir, this.engineHandlers(item.id), {
+      selectedFiles: item.selectedFiles,
+      sequential: item.sequential,
+    });
   }
 
   // One torrent serves an item across its whole life (download -> seed ->
@@ -130,7 +134,13 @@ export class DownloadQueue extends EventEmitter {
         if (!it) return; // the rest only matters while still downloading
         if (meta.name) it.name = meta.name;
         if (meta.total) it.totalBytes = meta.total;
-        it.files = meta.files;
+        it.files = meta.files.length;
+        it.fileList = meta.files;
+
+        if (!it.selectedFiles) {
+          it.status = "selecting_files";
+        }
+
         this.changed();
         void this.persist();
       },
@@ -326,6 +336,19 @@ export class DownloadQueue extends EventEmitter {
     this.changed();
     void this.persist();
     this.maybeStopPoll();
+  }
+
+  commitSelection(id: string, selectedFiles: number[], sequential: boolean): void {
+    const it = this.items.get(id);
+    if (!it || it.status !== "selecting_files") return;
+    it.selectedFiles = selectedFiles;
+    it.sequential = sequential;
+    it.status = "downloading";
+    this.engine.remove(id);
+    this.startEngine(it);
+    this.ensurePoll();
+    this.changed();
+    void this.persist();
   }
 
   retry(id: string): void {
