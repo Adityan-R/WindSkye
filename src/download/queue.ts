@@ -19,6 +19,7 @@ import {
 import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
 import type { QueueItem, SeedItem, CreatedItem } from "./types";
 import type { SourceId } from "../sources/types";
+import { notify } from "../util/notify";
 
 /**
  * A real seed never pulls data off the network: verifying on-disk files reads
@@ -59,9 +60,11 @@ export class DownloadQueue extends EventEmitter {
   private created = new Map<string, CreatedItem>();
   private strayHits = new Map<string, number>();
   private seedStartedAt = new Map<string, number>();
+  private notificationsEnabled = true;
 
-  applyConfig(config: { maxConns: number; downloadLimit: number; uploadLimit: number }): void {
+  applyConfig(config: { maxConns: number; downloadLimit: number; uploadLimit: number; notifications: boolean }): void {
     this.engine.setConfig(config.maxConns, config.downloadLimit, config.uploadLimit);
+    this.notificationsEnabled = config.notifications;
   }
 
   getItems(): QueueItem[] {
@@ -88,6 +91,8 @@ export class DownloadQueue extends EventEmitter {
     }
     const existing = this.items.get(input.id);
     if (existing && existing.status !== "failed") return;
+    
+    const isNew = !existing;
     const item: QueueItem = existing
       ? { ...existing, status: "downloading", error: undefined, speed: 0 }
       : {
@@ -109,6 +114,10 @@ export class DownloadQueue extends EventEmitter {
     this.ensurePoll();
     this.changed();
     void this.persist();
+
+    if (isNew && this.notificationsEnabled) {
+      notify("Torrent Added", item.name || "Unknown Torrent");
+    }
   }
 
   private startEngine(item: QueueItem): void {
@@ -169,6 +178,9 @@ export class DownloadQueue extends EventEmitter {
           this.changed();
           void this.persist();
           this.maybeStopPoll();
+          if (this.notificationsEnabled) {
+            notify("Download Failed", `${it.name}: ${msg}`);
+          }
           return;
         }
         const sd = this.seeds.get(id);
@@ -180,6 +192,9 @@ export class DownloadQueue extends EventEmitter {
           this.changed();
           void this.persistSeeds();
           this.maybeStopPoll();
+          if (this.notificationsEnabled) {
+            notify("Torrent Error", `${sd.name}: ${msg}`);
+          }
         }
       },
     };
@@ -195,6 +210,9 @@ export class DownloadQueue extends EventEmitter {
     this.changed();
     void this.persist();
     this.maybeStopPoll();
+    if (this.notificationsEnabled) {
+      notify("Download Completed", it.name);
+    }
   }
 
   // Adopt the just-finished download's live torrent as a seed in place: no

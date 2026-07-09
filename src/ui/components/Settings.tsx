@@ -14,7 +14,7 @@ export function Settings() {
   
   const [cursor, setCursor] = useState(0);
   const [editing, setEditing] = useState(false);
-  const totalFields = 5;
+  const totalFields = 6;
 
   useInput(
     (input, key) => {
@@ -26,6 +26,8 @@ export function Settings() {
           const currentIndex = AVAILABLE_THEMES.indexOf(config.theme);
           const nextTheme = AVAILABLE_THEMES[wrapStep(currentIndex, 1, AVAILABLE_THEMES.length)] || "default";
           setConfig({ ...config, theme: nextTheme });
+        } else if (cursor === 5) { // Notifications toggling
+          setConfig({ ...config, notifications: !config.notifications });
         } else {
           setEditing(true);
         }
@@ -103,6 +105,7 @@ export function Settings() {
       {renderRow(2, "Download Limit", String(config.downloadLimit), "downloadLimit")}
       {renderRow(3, "Upload Limit", String(config.uploadLimit), "uploadLimit")}
       {renderRow(4, "Theme", config.theme, "theme", false)}
+      {renderRow(5, "Desktop Notifications", config.notifications ? "Enabled" : "Disabled", "notifications", false)}
       
       <Box marginTop={2} paddingLeft={MARK}>
         <Text color={COLOR.dim}>

@@ -283,6 +283,7 @@ export function App({
       maxConns: config.maxConns,
       downloadLimit: config.downloadLimit,
       uploadLimit: config.uploadLimit,
+      notifications: config.notifications,
     });
     return {
       config,

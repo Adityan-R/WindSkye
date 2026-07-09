@@ -8,6 +8,7 @@ export interface Config {
   maxConns: number;
   downloadLimit: number;
   uploadLimit: number;
+  notifications: boolean;
 }
 
 export const defaultConfig: Config = {
@@ -16,6 +17,7 @@ export const defaultConfig: Config = {
   maxConns: 55,
   downloadLimit: 0,
   uploadLimit: 0,
+  notifications: true,
 };
 
 export async function loadConfig(): Promise<Config> {
@@ -35,7 +37,8 @@ export async function loadConfig(): Promise<Config> {
     if (typeof cfg.maxConns !== "number") cfg.maxConns = defaultConfig.maxConns;
     if (typeof cfg.downloadLimit !== "number") cfg.downloadLimit = defaultConfig.downloadLimit;
     if (typeof cfg.uploadLimit !== "number") cfg.uploadLimit = defaultConfig.uploadLimit;
-    return cfg;
+    if (typeof cfg.notifications !== "boolean") cfg.notifications = defaultConfig.notifications;
+    return cfg as Config;
   } catch {
     return { ...defaultConfig };
   }
