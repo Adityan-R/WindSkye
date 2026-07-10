@@ -22,10 +22,10 @@ export function Panel({ title, width, focused, count, height, children }: PanelP
     <Box flexDirection="column" width={w}>
       <Box>
         <Text color={color}>{"╭─ "}</Text>
-        <Text bold color={color}>
-          {label}
+        <Text bold color={focused ? "black" : color} backgroundColor={focused ? COLOR.accent : undefined}>
+          {focused ? ` ${label} ` : label}
         </Text>
-        <Text color={color}>{` ${"─".repeat(fill)}╮`}</Text>
+        <Text color={color}>{`${focused ? "" : " "}${"─".repeat(focused ? fill - 1 : fill)}╮`}</Text>
       </Box>
       <Box
         width={w}

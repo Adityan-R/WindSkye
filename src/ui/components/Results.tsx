@@ -264,8 +264,8 @@ export function Results() {
       if (erroredCount >= search.total) {
         const downAll = SOURCES.filter((s) => search.perSource[s.id]?.error);
         return (
-          <Text color={COLOR.warn}>
-            {`Couldn't reach any source. They may be down${outageCodes(downAll)}.`}
+          <Text color={COLOR.bad}>
+            {`${ICON.error} Couldn't reach any source. They may be down${outageCodes(downAll)}.`}
           </Text>
         );
       }
@@ -273,8 +273,8 @@ export function Results() {
         const down = tabSources.filter((s) => search.perSource[s.id]?.error);
         const who = down.length === 1 ? "The source" : `All ${down.length} sources`;
         return (
-          <Text color={COLOR.warn}>
-            {`Couldn't reach ${activeCat.label}. ${who} may be down${outageCodes(down)}.`}
+          <Text color={COLOR.bad}>
+            {`${ICON.error} Couldn't reach ${activeCat.label}. ${who} may be down${outageCodes(down)}.`}
           </Text>
         );
       }
@@ -330,7 +330,13 @@ export function Results() {
             <Detail r={detail} width={Math.max(10, contentWidth - 4)} />
           ) : (
             <>
-              <Box>{status()}</Box>
+              <Box
+                flexGrow={results.length === 0 ? 1 : 0}
+                justifyContent={results.length === 0 ? "center" : "flex-start"}
+                alignItems={results.length === 0 ? "center" : "flex-start"}
+              >
+                {status()}
+              </Box>
               <Box flexDirection="column" marginTop={results.length > 0 ? 1 : 0}>
                 {results.length > 0 ? (
                   <Box>
@@ -375,10 +381,11 @@ export function Results() {
                       <Box flexGrow={1} minWidth={0} marginLeft={1}>
                         <Text
                           wrap="truncate-end"
-                          color={here ? COLOR.accent : COLOR.dim}
                           bold={here}
+                          color={here ? "black" : COLOR.dim}
+                          backgroundColor={here ? COLOR.accent : undefined}
                         >
-                          {cleanText(r.name)}
+                          {here ? ` ${cleanText(r.name)} ` : cleanText(r.name)}
                         </Text>
                       </Box>
                       {showStats ? (

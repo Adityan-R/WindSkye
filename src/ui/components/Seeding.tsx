@@ -71,7 +71,9 @@ export function Seeding() {
   if (total === 0) {
     return (
       <Panel title="seeding" width={contentWidth} focused={focused} height={panelH}>
-        <Text color={COLOR.dim}>Nothing here yet. Downloads start seeding automatically when they finish, and show up here.</Text>
+        <Box flexGrow={1} justifyContent="center" alignItems="center">
+          <Text color={COLOR.dim}>Nothing here yet. Downloads start seeding automatically when they finish.</Text>
+        </Box>
       </Panel>
     );
   }
@@ -144,8 +146,13 @@ export function Seeding() {
                 <Text color={!seed && !here ? COLOR.dim : g.color}>{g.icon}</Text>
               </Box>
               <Box flexGrow={1} minWidth={0} marginLeft={1}>
-                <Text wrap="truncate-end" bold={here} color={here ? COLOR.accent : COLOR.dim}>
-                  {cleanText(h.name)}
+                <Text
+                  wrap="truncate-end"
+                  bold={here}
+                  color={here ? "black" : COLOR.dim}
+                  backgroundColor={here ? COLOR.accent : undefined}
+                >
+                  {here ? ` ${cleanText(h.name)} ` : cleanText(h.name)}
                 </Text>
               </Box>
               <Box width={SIZE_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">

@@ -17,18 +17,18 @@ export const COLOR = {
 };
 
 export const ICON = {
-  done: "✓",
-  error: "✗",
-  pending: "·",
-  pointer: "❯",
-  dot: "·",
+  done: "✔",
+  error: "✖",
+  pending: "⋯",
+  pointer: "▶",
+  dot: "•",
   warn: "⚠",
-  bar: "▌",
+  bar: "┃",
   down: "↓",
   up: "↑",
   peer: "•",
   pause: "⏸",
-  create: "+",
+  create: "＋",
 } as const;
 
 export const RULE = "#6b6577";

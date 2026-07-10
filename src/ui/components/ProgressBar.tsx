@@ -56,7 +56,7 @@ export function ProgressBar({
     return () => clearInterval(timer);
   }, [animate]);
 
-  const track = empty > 0 ? <Text color={RULE}>{"░".repeat(empty)}</Text> : null;
+  const track = empty > 0 ? <Text color={COLOR.dim} dimColor>{"─".repeat(empty)}</Text> : null;
 
   if (filled === 0) return <Text>{track}</Text>;
 

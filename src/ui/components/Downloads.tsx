@@ -188,7 +188,9 @@ export function Downloads() {
   if (total === 0) {
     return (
       <Panel title="downloads" width={contentWidth} focused={focused} height={panelH}>
-        <Text color={COLOR.dim}>No downloads yet. Find something and press d to grab it.</Text>
+        <Box flexGrow={1} justifyContent="center" alignItems="center">
+          <Text color={COLOR.dim}>No downloads yet. Find something and press [d] to grab it.</Text>
+        </Box>
       </Panel>
     );
   }
@@ -249,9 +251,10 @@ export function Downloads() {
                 <Text
                   wrap="truncate-end"
                   bold={here}
-                  color={here ? COLOR.accent : COLOR.dim}
+                  color={here ? "black" : COLOR.dim}
+                  backgroundColor={here ? COLOR.accent : undefined}
                 >
-                  {cleanText(it.name)}
+                  {here ? ` ${cleanText(it.name)} ` : cleanText(it.name)}
                 </Text>
               </Box>
               <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
@@ -302,13 +305,14 @@ export function Downloads() {
               </Text>
             </Box>
             <Box flexGrow={1} minWidth={0}>
-              <Text
-                wrap="truncate-end"
-                bold={here}
-                color={here ? COLOR.accent : COLOR.dim}
-              >
-                {cleanText(h.name)}
-              </Text>
+                <Text
+                  wrap="truncate-end"
+                  bold={here}
+                  color={here ? "black" : COLOR.dim}
+                  backgroundColor={here ? COLOR.accent : undefined}
+                >
+                  {here ? ` ${cleanText(h.name)} ` : cleanText(h.name)}
+                </Text>
             </Box>
             <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
               <Text color={COLOR.dim}>{h.sizeBytes > 0 ? formatBytes(h.sizeBytes) : "-"}</Text>

@@ -65,10 +65,11 @@ export function Sidebar() {
                   ) : null}
                 </Box>
                 <Text
-                  color={selected ? (focused ? COLOR.accent : COLOR.alt) : COLOR.dim}
+                  color={selected ? (focused ? "black" : COLOR.alt) : COLOR.dim}
+                  backgroundColor={selected && focused ? COLOR.accent : undefined}
                   bold={selected && focused}
                 >
-                  {item.label}
+                  {selected && focused ? ` ${item.label} ` : item.label}
                 </Text>
                 {(() => {
                   const n = item.key === "downloads" ? active : item.key === "seeding" ? seeding : item.key === "create" ? creating : 0;
