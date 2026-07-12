@@ -64,4 +64,4 @@ Pull requests are welcome. Please ensure that all changes pass the TypeScript co
 
 ## Legal Disclaimer
 
-Windskye is a decentralized peer-to-peer file sharing tool. Users are solely responsible for ensuring they have the legal right to download and distribute the content they interact with. The developers of Windskye do not endorse or support copyright infringement.
+Windskye is a decentralized, peer-to-peer file sharing tool. Users are solely responsible for ensuring they have the legal right to download and distribute the content they interact with. The developers of Windskye do not endorse or support copyright infringement.
