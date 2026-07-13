@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { useStore, useCreatedItems, type CreateFocus } from "../store";
 import { Panel } from "./Panel";
-import { wrapStep, windowStart } from "../move";
+import { ListRow, ListCell, ListText, ListPointer } from "./List";
+import { useListNavigation } from "../hooks/useListNavigation";
 import { COLOR, GUTTER, ICON } from "../theme";
 import { cleanText, formatBytes, formatBytesPerSec, truncate } from "../../util/format";
 import type { CreatedItem } from "../../download/types";
@@ -10,7 +11,6 @@ import type { CreatedItem } from "../../download/types";
 const MARK = 2;
 const SIZE_W = 10;
 const STATUS_W = 14;
-const PATH_W = 20;
 const PAUSED = "#7c7785";
 
 function glyph(item: CreatedItem): { icon: string; color: string } {
@@ -41,21 +41,27 @@ export function Create() {
   const focused = region === "content";
 
   const total = items.length;
-  const [cursor, setCursor] = useState(0);
-  const clamped = Math.min(cursor, Math.max(0, total - 1));
+  const panelH = Math.max(5, listRows - 1);
+  const rows = Math.max(1, panelH - 2);
 
   const [prompting, setPrompting] = useState(false);
+  const [canceling, setCanceling] = useState<CreatedItem | null>(null);
+  const [cancelOption, setCancelOption] = useState<"yes" | "no">("no");
   const [pathInput, setPathInput] = useState("");
+
+  const { cursor: clamped, start } = useListNavigation({
+    total,
+    windowSize: rows,
+    isActive: focused && !canceling && !prompting,
+  });
 
   const focusStatus: CreateFocus =
     focused && total > 0 ? items[clamped]?.status ?? null : null;
+    
   useEffect(() => {
     setCreateFocus(focusStatus);
     return () => setCreateFocus(null);
   }, [focusStatus, setCreateFocus]);
-
-  const [canceling, setCanceling] = useState<CreatedItem | null>(null);
-  const [cancelOption, setCancelOption] = useState<"yes" | "no">("no");
 
   // When the path prompt or cancel prompt opens/closes, toggle capture mode so App-level
   // shortcuts don't interfere with typing.
@@ -103,9 +109,8 @@ export function Create() {
         return;
       }
       if (total === 0) return;
-      if (key.upArrow || input === "k") setCursor(wrapStep(clamped, -1, total));
-      else if (key.downArrow || input === "j") setCursor(wrapStep(clamped, 1, total));
-      else if (input === "p") {
+      
+      if (input === "p") {
         const c = items[clamped];
         if (!c) return;
         queue.toggleCreatedPause(c.id);
@@ -152,7 +157,6 @@ export function Create() {
     { isActive: !!canceling },
   );
 
-  const panelH = Math.max(5, listRows - 1);
   const createdCount = queue.createdCount;
 
   if (canceling) {
@@ -235,8 +239,6 @@ export function Create() {
     }
   }
 
-  const rows = Math.max(1, panelH - 2);
-  const start = windowStart(clamped, total, rows);
   const visible = items.slice(start, start + rows);
 
   return (
@@ -261,44 +263,42 @@ export function Create() {
       </Box>
 
       <Box flexDirection="column" marginTop={1}>
-        <Box>
-          <Box width={MARK} flexShrink={0} />
-          <Box width={GUTTER} flexShrink={0} />
-          <Box flexGrow={1} minWidth={0} marginLeft={1}>
+        <ListRow>
+          <ListCell width={MARK} />
+          <ListCell width={GUTTER} />
+          <ListCell flexGrow={1} marginLeft={1}>
             <Text bold color={COLOR.dim}>Name</Text>
-          </Box>
-          <Box width={SIZE_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+          </ListCell>
+          <ListCell width={SIZE_W} marginLeft={1} justifyContent="flex-end">
             <Text bold color={COLOR.dim}>Size</Text>
-          </Box>
-          <Box width={STATUS_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+          </ListCell>
+          <ListCell width={STATUS_W} marginLeft={1} justifyContent="flex-end">
             <Text bold color={COLOR.dim}>Status</Text>
-          </Box>
-        </Box>
+          </ListCell>
+        </ListRow>
 
         {visible.map((item, i) => {
           const here = start + i === clamped && focused;
           const g = glyph(item);
           const st = statusCell(item);
           return (
-            <Box key={item.id}>
-              <Box width={MARK} flexShrink={0}>
-                <Text color={COLOR.accent} bold>{here ? ICON.pointer : ""}</Text>
-              </Box>
-              <Box width={GUTTER} flexShrink={0}>
+            <ListRow key={item.id}>
+              <ListCell width={MARK}>
+                <ListPointer focused={here} />
+              </ListCell>
+              <ListCell width={GUTTER}>
                 <Text color={!here && item.status !== "seeding" ? COLOR.dim : g.color}>{g.icon}</Text>
-              </Box>
-              <Box flexGrow={1} minWidth={0} marginLeft={1}>
-                <Text wrap="truncate-end" bold={here} color={here ? COLOR.accent : COLOR.dim}>
-                  {cleanText(item.name)}
-                </Text>
-              </Box>
-              <Box width={SIZE_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell flexGrow={1} marginLeft={1}>
+                <ListText text={item.name} focused={here} color={COLOR.dim} truncate />
+              </ListCell>
+              <ListCell width={SIZE_W} marginLeft={1} justifyContent="flex-end">
                 <Text color={COLOR.dim}>{item.sizeBytes > 0 ? formatBytes(item.sizeBytes) : "-"}</Text>
-              </Box>
-              <Box width={STATUS_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell width={STATUS_W} marginLeft={1} justifyContent="flex-end">
                 <Text color={st.dim ? COLOR.dim : st.color}>{truncate(st.text, STATUS_W)}</Text>
-              </Box>
-            </Box>
+              </ListCell>
+            </ListRow>
           );
         })}
       </Box>

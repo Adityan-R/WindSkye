@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Text } from "ink";
 import { COLOR, RULE, lerpHex } from "../theme";
 import { SHEEN_PEAK, SHEEN_TICK_MS, sheenCenter, sheenIntensity, sheenPeriod } from "../sheen";
@@ -60,13 +60,16 @@ export function ProgressBar({
 
   if (filled === 0) return <Text>{track}</Text>;
 
-  if (!animate) {
+  const baseCells = useMemo(() => {
     const deep = lerpHex(color, "#000000", 0.3);
     const bright = lerpHex(color, COLOR.text, 0.35);
-    const cells = Array.from({ length: filled }, (_, i) => ramp(i / denom, deep, color, bright));
+    return Array.from({ length: filled }, (_, i) => ramp(i / denom, deep, color, bright));
+  }, [filled, color, denom]);
+
+  if (!animate) {
     return (
       <Text>
-        {paint(runs(cells))}
+        {paint(runs(baseCells))}
         {track}
       </Text>
     );
@@ -74,11 +77,9 @@ export function ProgressBar({
 
   const period = sheenPeriod(width);
   const center = sheenCenter(tick, period);
-  const cells = Array.from({ length: filled }, (_, i) => {
-    let c = ramp(i / denom, DEEP, COLOR.accent, COLOR.bright);
+  const cells = baseCells.map((c, i) => {
     const intensity = sheenIntensity(i, center);
-    if (intensity > 0) c = lerpHex(c, SHEEN_PEAK, intensity);
-    return c;
+    return intensity > 0 ? lerpHex(c, SHEEN_PEAK, intensity) : c;
   });
 
   return (

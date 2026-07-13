@@ -3,7 +3,10 @@ import { Box, Text, useInput } from "ink";
 import { COLOR, ICON } from "../theme";
 import { wrapStep, windowStart } from "../move";
 import { cleanText, formatBytes } from "../../util/format";
+import { ListRow, ListCell, ListText, ListPointer } from "./List";
 import type { QueueItem } from "../../download/types";
+
+const MARK = 2;
 
 export function FileSelection({
   item,
@@ -86,24 +89,22 @@ export function FileSelection({
           const here = idx === clamped;
           const isSelected = selected.has(idx);
           return (
-            <Box key={idx}>
-              <Box width={2} flexShrink={0}>
-                <Text color={COLOR.accent} bold>{here ? ICON.pointer : ""}</Text>
-              </Box>
-              <Box width={4} flexShrink={0}>
+            <ListRow key={idx}>
+              <ListCell width={MARK}>
+                <ListPointer focused={here} />
+              </ListCell>
+              <ListCell width={4}>
                 <Text color={isSelected ? COLOR.good : COLOR.dim}>
                   {isSelected ? "[x]" : "[ ]"}
                 </Text>
-              </Box>
-              <Box flexGrow={1} minWidth={0}>
-                <Text wrap="truncate-end" bold={here} color={here ? COLOR.accent : (isSelected ? COLOR.text : COLOR.dim)}>
-                  {cleanText(f.name)}
-                </Text>
-              </Box>
-              <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell flexGrow={1}>
+                <ListText text={f.name} focused={here} color={isSelected ? COLOR.text : COLOR.dim} truncate />
+              </ListCell>
+              <ListCell width={10} marginLeft={1} justifyContent="flex-end">
                 <Text color={COLOR.dim}>{formatBytes(f.length)}</Text>
-              </Box>
-            </Box>
+              </ListCell>
+            </ListRow>
           );
         })}
       </Box>

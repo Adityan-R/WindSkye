@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { useStore, useQueueHistory, useSeeds, type SeedFocus } from "../store";
 import { Panel } from "./Panel";
-import { wrapStep, windowStart } from "../move";
+import { ListRow, ListCell, ListText, ListPointer } from "./List";
+import { useListNavigation } from "../hooks/useListNavigation";
 import { COLOR, GUTTER, ICON, SOURCE_STYLE } from "../theme";
 import { cleanText, formatBytes, formatBytesPerSec, truncate } from "../../util/format";
 import type { SeedItem } from "../../download/types";
@@ -36,21 +37,26 @@ export function Seeding() {
   const focused = region === "content";
 
   const total = history.length;
-  const [cursor, setCursor] = useState(0);
-  const clamped = Math.min(cursor, Math.max(0, total - 1));
+  const panelH = Math.max(5, listRows - 1);
+  const rows = Math.max(1, panelH - 2);
+
+  const { cursor: clamped, start } = useListNavigation({
+    total,
+    windowSize: rows,
+    isActive: focused,
+  });
 
   const focusStatus: SeedFocus | null =
     focused && total > 0 ? (seeds.get(history[clamped]?.id ?? "")?.status ?? "idle") : null;
+    
   useEffect(() => {
     setSeedFocus(focusStatus);
     return () => setSeedFocus(null);
   }, [focusStatus, setSeedFocus]);
 
   useInput(
-    (input, key) => {
-      if (key.upArrow || input === "k") setCursor(wrapStep(clamped, -1, total));
-      else if (key.downArrow || input === "j") setCursor(wrapStep(clamped, 1, total));
-      else if (input === "p") {
+    (input, _key) => {
+      if (input === "p") {
         const h = history[clamped];
         if (!h) return;
         queue.toggleSeeding(h);
@@ -65,7 +71,6 @@ export function Seeding() {
     { isActive: focused && total > 0 },
   );
 
-  const panelH = Math.max(5, listRows - 1);
   const seedingCount = queue.seedingCount;
 
   if (total === 0) {
@@ -90,8 +95,6 @@ export function Seeding() {
     }
   }
 
-  const rows = Math.max(1, panelH - 2);
-  const start = windowStart(clamped, total, rows);
   const visible = history.slice(start, start + rows);
 
   return (
@@ -114,22 +117,22 @@ export function Seeding() {
       </Box>
 
       <Box flexDirection="column" marginTop={1}>
-        <Box>
-          <Box width={MARK} flexShrink={0} />
-          <Box width={GUTTER} flexShrink={0} />
-          <Box flexGrow={1} minWidth={0} marginLeft={1}>
+        <ListRow>
+          <ListCell width={MARK} />
+          <ListCell width={GUTTER} />
+          <ListCell flexGrow={1} marginLeft={1}>
             <Text bold color={COLOR.dim}>Name</Text>
-          </Box>
-          <Box width={SIZE_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+          </ListCell>
+          <ListCell width={SIZE_W} marginLeft={1} justifyContent="flex-end">
             <Text bold color={COLOR.dim}>Size</Text>
-          </Box>
-          <Box width={STATUS_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+          </ListCell>
+          <ListCell width={STATUS_W} marginLeft={1} justifyContent="flex-end">
             <Text bold color={COLOR.dim}>Status</Text>
-          </Box>
-          <Box width={SRC_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+          </ListCell>
+          <ListCell width={SRC_W} marginLeft={1} justifyContent="flex-end">
             <Text bold color={COLOR.dim}>Src</Text>
-          </Box>
-        </Box>
+          </ListCell>
+        </ListRow>
 
         {visible.map((h, i) => {
           const here = start + i === clamped && focused;
@@ -138,35 +141,28 @@ export function Seeding() {
           const st = statusCell(seed);
           const ss = SOURCE_STYLE[h.source ?? "fitgirl"];
           return (
-            <Box key={h.id}>
-              <Box width={MARK} flexShrink={0}>
-                <Text color={COLOR.accent} bold>{here ? ICON.pointer : ""}</Text>
-              </Box>
-              <Box width={GUTTER} flexShrink={0}>
+            <ListRow key={h.id}>
+              <ListCell width={MARK}>
+                <ListPointer focused={here} />
+              </ListCell>
+              <ListCell width={GUTTER}>
                 <Text color={!seed && !here ? COLOR.dim : g.color}>{g.icon}</Text>
-              </Box>
-              <Box flexGrow={1} minWidth={0} marginLeft={1}>
-                <Text
-                  wrap="truncate-end"
-                  bold={here}
-                  color={here ? "black" : COLOR.dim}
-                  backgroundColor={here ? COLOR.accent : undefined}
-                >
-                  {here ? ` ${cleanText(h.name)} ` : cleanText(h.name)}
-                </Text>
-              </Box>
-              <Box width={SIZE_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell flexGrow={1} marginLeft={1}>
+                <ListText text={h.name} focused={here} color={COLOR.dim} truncate />
+              </ListCell>
+              <ListCell width={SIZE_W} marginLeft={1} justifyContent="flex-end">
                 <Text color={COLOR.dim}>{h.sizeBytes > 0 ? formatBytes(h.sizeBytes) : "-"}</Text>
-              </Box>
-              <Box width={STATUS_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell width={STATUS_W} marginLeft={1} justifyContent="flex-end">
                 <Text color={st.dim ? COLOR.dim : st.color}>{truncate(st.text, STATUS_W)}</Text>
-              </Box>
-              <Box width={SRC_W} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell width={SRC_W} marginLeft={1} justifyContent="flex-end">
                 <Text color={!h.source || !here ? COLOR.dim : ss.color}>
                   {h.source ? ss.tag : "mag"}
                 </Text>
-              </Box>
-            </Box>
+              </ListCell>
+            </ListRow>
           );
         })}
       </Box>

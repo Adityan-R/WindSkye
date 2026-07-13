@@ -5,7 +5,9 @@ import { Spinner } from "./Spinner";
 import { SearchBar } from "./SearchBar";
 import { Panel } from "./Panel";
 import { Rule } from "./Rule";
+import { ListRow, ListCell, ListText, ListPointer } from "./List";
 import { useConcurrentSearch } from "../hooks/useConcurrentSearch";
+import { useListNavigation } from "../hooks/useListNavigation";
 import { getSource, SOURCES } from "../../sources/registry";
 import { wrapStep, windowStart, resultsPanelOuter } from "../move";
 import { sortResults, nextSort, sortLabel, sortArrow, type Sort, type SortField } from "../sort";
@@ -135,12 +137,7 @@ export function Results() {
 
   const focused = region === "content";
   const [mode, setMode] = useState<Mode>("list");
-  const [cursor, setCursor] = useState(0);
   const [detail, setDetail] = useState<TorrentResult | null>(null);
-
-  useEffect(() => {
-    setCursor(0);
-  }, [results]);
 
   useEffect(() => {
     if (!focused) return;
@@ -152,12 +149,20 @@ export function Results() {
     if (!focused) setMode("list");
   }, [focused]);
 
-  const clamped = Math.min(cursor, Math.max(0, results.length - 1));
-
   const searchH = 3;
   const panelOuter = resultsPanelOuter(listRows, searchH);
   const listHeight = Math.max(3, panelOuter - 4);
-  const pageJump = Math.max(1, listHeight - 1);
+
+  const { cursor: clamped, start, setCursor } = useListNavigation({
+    total: results.length,
+    windowSize: listHeight,
+    isActive: focused && mode === "list",
+    onBoundaryUp: () => setMode("search"),
+  });
+
+  useEffect(() => {
+    setCursor(0);
+  }, [results, setCursor]);
 
   const openDownload = (r: TorrentResult): void =>
     startDownload({
@@ -177,16 +182,8 @@ export function Results() {
         setMode("search");
         return;
       }
-      if (key.upArrow || input === "k") {
-        if (results.length > 0 && clamped > 0) setCursor(clamped - 1);
-        else setMode("search");
-        return;
-      }
       if (results.length === 0) return;
-      if (key.downArrow || input === "j") setCursor(wrapStep(clamped, 1, results.length));
-      else if (key.pageUp) setCursor(Math.max(0, clamped - pageJump));
-      else if (key.pageDown) setCursor(Math.min(results.length - 1, clamped + pageJump));
-      else if (key.return) {
+      if (key.return) {
         const r = results[clamped];
         if (r) {
           setDetail(r);
@@ -303,7 +300,7 @@ export function Results() {
     );
   };
 
-  const start = windowStart(clamped, results.length, listHeight);
+
   const visible = results.slice(start, start + listHeight);
   const count = results.length > 0 ? `(${results.length})` : undefined;
 
@@ -340,30 +337,32 @@ export function Results() {
               <Box flexDirection="column" marginTop={results.length > 0 ? 1 : 0}>
                 {results.length > 0 ? (
                   <Box>
-                    <Box width={GUTTER} flexShrink={0} />
-                    <Box width={numW} flexShrink={0} justifyContent="flex-end">
-                      <Text bold color={COLOR.dim}>#</Text>
-                    </Box>
-                    <Box flexGrow={1} minWidth={0} marginLeft={1}>
-                      <Text bold color={COLOR.dim}>Name</Text>
-                    </Box>
-                    {showStats ? (
-                      <>
-                        <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
-                          <Text bold color={COLOR.dim}>{sortMark("size", "Size")}</Text>
-                        </Box>
-                        <Box width={9} flexShrink={0} marginLeft={1} justifyContent="flex-end">
-                          <Text bold color={COLOR.dim}>{sortMark("seeders", "Seed:Lch")}</Text>
-                        </Box>
-                      </>
-                    ) : (
-                      <Box width={12} flexShrink={0} marginLeft={1} justifyContent="flex-end">
-                        <Text bold color={COLOR.dim}>Added</Text>
-                      </Box>
-                    )}
-                    <Box width={4} flexShrink={0} marginLeft={1} justifyContent="flex-end">
-                      <Text bold color={COLOR.dim}>{sortMark("source", "Src")}</Text>
-                    </Box>
+                    <ListRow>
+                      <ListCell width={GUTTER} />
+                      <ListCell width={numW} justifyContent="flex-end">
+                        <Text bold color={COLOR.dim}>#</Text>
+                      </ListCell>
+                      <ListCell flexGrow={1} marginLeft={1}>
+                        <Text bold color={COLOR.dim}>Name</Text>
+                      </ListCell>
+                      {showStats ? (
+                        <>
+                          <ListCell width={10} marginLeft={1} justifyContent="flex-end">
+                            <Text bold color={COLOR.dim}>{sortMark("size", "Size")}</Text>
+                          </ListCell>
+                          <ListCell width={9} marginLeft={1} justifyContent="flex-end">
+                            <Text bold color={COLOR.dim}>{sortMark("seeders", "Seed:Lch")}</Text>
+                          </ListCell>
+                        </>
+                      ) : (
+                        <ListCell width={12} marginLeft={1} justifyContent="flex-end">
+                          <Text bold color={COLOR.dim}>Added</Text>
+                        </ListCell>
+                      )}
+                      <ListCell width={4} marginLeft={1} justifyContent="flex-end">
+                        <Text bold color={COLOR.dim}>{sortMark("source", "Src")}</Text>
+                      </ListCell>
+                    </ListRow>
                   </Box>
                 ) : null}
                 {visible.map((r, i) => {
@@ -371,45 +370,38 @@ export function Results() {
                   const here = index === clamped && focused && mode === "list";
                   const ss = SOURCE_STYLE[r.source];
                   return (
-                    <Box key={r.infoHash}>
-                      <Box width={GUTTER} flexShrink={0}>
-                        <Text color={COLOR.accent}>{here ? ICON.pointer : ""}</Text>
-                      </Box>
-                      <Box width={numW} flexShrink={0} justifyContent="flex-end">
+                    <ListRow key={r.infoHash}>
+                      <ListCell width={GUTTER}>
+                        <ListPointer focused={here} />
+                      </ListCell>
+                      <ListCell width={numW} justifyContent="flex-end">
                         <Text color={COLOR.dim}>{index + 1}</Text>
-                      </Box>
-                      <Box flexGrow={1} minWidth={0} marginLeft={1}>
-                        <Text
-                          wrap="truncate-end"
-                          bold={here}
-                          color={here ? "black" : COLOR.dim}
-                          backgroundColor={here ? COLOR.accent : undefined}
-                        >
-                          {here ? ` ${cleanText(r.name)} ` : cleanText(r.name)}
-                        </Text>
-                      </Box>
+                      </ListCell>
+                      <ListCell flexGrow={1} marginLeft={1}>
+                        <ListText text={r.name} focused={here} color={COLOR.dim} truncate />
+                      </ListCell>
                       {showStats ? (
                         <>
-                          <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+                          <ListCell width={10} marginLeft={1} justifyContent="flex-end">
                             <Text color={COLOR.dim}>{r.sizeBytes > 0 ? formatBytes(r.sizeBytes) : "-"}</Text>
-                          </Box>
-                          <Box width={9} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+                          </ListCell>
+                          <ListCell width={9} marginLeft={1} justifyContent="flex-end">
                             <Text color={r.seeders > 0 ? COLOR.good : COLOR.dim}>
                               {r.seeders || r.leechers ? `${r.seeders}:${r.leechers}` : "-"}
                             </Text>
-                          </Box>
+                          </ListCell>
                         </>
                       ) : (
-                        <Box width={12} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+                        <ListCell width={12} marginLeft={1} justifyContent="flex-end">
                           <Text color={COLOR.dim}>{formatRelative(r.added) || "-"}</Text>
-                        </Box>
+                        </ListCell>
                       )}
-                      <Box width={4} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+                      <ListCell width={4} marginLeft={1} justifyContent="flex-end">
                         <Text color={here ? ss.color : COLOR.dim}>
                           {ss.tag}
                         </Text>
-                      </Box>
-                    </Box>
+                      </ListCell>
+                    </ListRow>
                   );
                 })}
               </Box>

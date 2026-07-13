@@ -6,7 +6,8 @@ import { openFileExplorer } from "../../util/open";
 import { FileSelection } from "./FileSelection";
 import { Panel } from "./Panel";
 import { ProgressBar } from "./ProgressBar";
-import { wrapStep, windowStart } from "../move";
+import { ListRow, ListCell, ListText, ListPointer } from "./List";
+import { useListNavigation } from "../hooks/useListNavigation";
 import { COLOR, GUTTER, ICON, SOURCE_STYLE } from "../theme";
 import {
   cleanText,
@@ -53,15 +54,50 @@ export function Downloads() {
   const focused = region === "content";
 
   const total = active.length + recent.length;
-  const [cursor, setCursor] = useState(0);
-  const clamped = Math.min(cursor, Math.max(0, total - 1));
-  const inActive = clamped < active.length;
-  const recentCursor = clamped - active.length;
 
   const [canceling, setCanceling] = useState<QueueItem | null>(null);
   const [cancelOption, setCancelOption] = useState<"yes" | "no">("no");
 
   const isSelecting = active.find((it) => it.status === "selecting_files");
+
+  const panelH = Math.max(5, listRows - 1);
+  const hasActive = active.length > 0;
+  const hasRecent = recent.length > 0;
+  const headerRows = hasRecent ? 1 : 0;
+  const ceiling = Math.max(1, panelH - 1);
+
+  let gapRows = hasActive && hasRecent ? 1 : 0;
+  let maxActive = 0;
+  let maxRecent = 0;
+  if (!hasRecent) {
+    maxActive = Math.max(1, Math.floor(ceiling / ROWS_PER_ACTIVE));
+  } else if (!hasActive) {
+    maxRecent = Math.max(1, ceiling - headerRows);
+  } else {
+    let budget = ceiling - headerRows - gapRows;
+    if (budget < ROWS_PER_ACTIVE + 1) {
+      gapRows = 0;
+      budget = ceiling - headerRows;
+    }
+    const activeRowCap = Math.max(ROWS_PER_ACTIVE, Math.floor(budget * 0.55));
+    maxActive = Math.min(active.length, Math.max(1, Math.floor(activeRowCap / ROWS_PER_ACTIVE)));
+    maxRecent = Math.max(1, budget - maxActive * ROWS_PER_ACTIVE);
+  }
+
+  const { cursor: clamped } = useListNavigation({
+    total,
+    windowSize: maxActive + maxRecent, // Use combined windowSize to approximate page jumps
+    isActive: focused && !canceling && !isSelecting,
+  });
+
+  const inActive = clamped < active.length;
+  const recentCursor = clamped - active.length;
+
+  const activeStart = Math.min(Math.max(0, (inActive ? clamped : 0) - Math.floor(maxActive / 2)), Math.max(0, active.length - maxActive));
+  const activeVisible = active.slice(activeStart, activeStart + maxActive);
+  
+  const recentStart = Math.min(Math.max(0, (inActive ? 0 : recentCursor) - Math.floor(maxRecent / 2)), Math.max(0, recent.length - maxRecent));
+  const recentVisible = recent.slice(recentStart, recentStart + maxRecent);
 
   useEffect(() => {
     setCaptureMode(canceling || isSelecting ? "text" : "none");
@@ -71,9 +107,7 @@ export function Downloads() {
 
   useInput(
     (input, key) => {
-      if (key.upArrow || input === "k") setCursor(wrapStep(clamped, -1, total));
-      else if (key.downArrow || input === "j") setCursor(wrapStep(clamped, 1, total));
-      else if (input === "f") queue.retryFailed();
+      if (input === "f") queue.retryFailed();
       else if (input === "x") queue.clearHistory();
       else if (inActive) {
         const it = active[clamped];
@@ -132,8 +166,6 @@ export function Downloads() {
     setDownloadFocus(focusKind);
     return () => setDownloadFocus(null);
   }, [focusKind, setDownloadFocus]);
-
-  const panelH = Math.max(5, listRows - 1);
 
   if (isSelecting) {
     return (
@@ -195,34 +227,6 @@ export function Downloads() {
     );
   }
 
-  const hasActive = active.length > 0;
-  const hasRecent = recent.length > 0;
-  const headerRows = hasRecent ? 1 : 0;
-  const ceiling = Math.max(1, panelH - 1);
-
-  let gapRows = hasActive && hasRecent ? 1 : 0;
-  let maxActive = 0;
-  let maxRecent = 0;
-  if (!hasRecent) {
-    maxActive = Math.max(1, Math.floor(ceiling / ROWS_PER_ACTIVE));
-  } else if (!hasActive) {
-    maxRecent = Math.max(1, ceiling - headerRows);
-  } else {
-    let budget = ceiling - headerRows - gapRows;
-    if (budget < ROWS_PER_ACTIVE + 1) {
-      gapRows = 0;
-      budget = ceiling - headerRows;
-    }
-    const activeRowCap = Math.max(ROWS_PER_ACTIVE, Math.floor(budget * 0.55));
-    maxActive = Math.min(active.length, Math.max(1, Math.floor(activeRowCap / ROWS_PER_ACTIVE)));
-    maxRecent = Math.max(1, budget - maxActive * ROWS_PER_ACTIVE);
-  }
-
-  const activeStart = windowStart(inActive ? clamped : 0, active.length, maxActive);
-  const activeVisible = active.slice(activeStart, activeStart + maxActive);
-  const recentStart = windowStart(inActive ? 0 : recentCursor, recent.length, maxRecent);
-  const recentVisible = recent.slice(recentStart, recentStart + maxRecent);
-
   const inner = contentWidth - 4;
   const gap = 2;
   const barW = Math.max(8, Math.min(28, Math.floor(inner * 0.4)));
@@ -238,46 +242,37 @@ export function Downloads() {
         const ss = SOURCE_STYLE[it.source ?? "fitgirl"];
         return (
           <Box key={it.id} flexDirection="column">
-            <Box>
-              <Box width={MARK} flexShrink={0}>
-                <Text color={COLOR.accent} bold>
-                  {here ? ICON.pointer : ""}
-                </Text>
-              </Box>
-              <Box width={GUTTER} flexShrink={0}>
+            <ListRow>
+              <ListCell width={MARK}>
+                <ListPointer focused={here} />
+              </ListCell>
+              <ListCell width={GUTTER}>
                 <Text color={sc}>{statusIcon(it.status)}</Text>
-              </Box>
-              <Box flexGrow={1} minWidth={0}>
-                <Text
-                  wrap="truncate-end"
-                  bold={here}
-                  color={here ? "black" : COLOR.dim}
-                  backgroundColor={here ? COLOR.accent : undefined}
-                >
-                  {here ? ` ${cleanText(it.name)} ` : cleanText(it.name)}
-                </Text>
-              </Box>
-              <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell flexGrow={1}>
+                <ListText text={it.name} focused={here} color={COLOR.dim} truncate />
+              </ListCell>
+              <ListCell width={10} marginLeft={1} justifyContent="flex-end">
                 <Text color={COLOR.dim}>{it.totalBytes > 0 ? formatBytes(it.totalBytes) : "-"}</Text>
-              </Box>
-              <Box width={4} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+              </ListCell>
+              <ListCell width={4} marginLeft={1} justifyContent="flex-end">
                 <Text color={!it.source || !here ? COLOR.dim : ss.color}>
                   {it.source ? ss.tag : "mag"}
                 </Text>
-              </Box>
-            </Box>
-            <Box>
-              <Box width={MARK + GUTTER} flexShrink={0} />
+              </ListCell>
+            </ListRow>
+            <ListRow>
+              <ListCell width={MARK + GUTTER} />
               <ProgressBar
                 pct={it.progress}
                 width={barW}
                 color={sc}
                 animate={it.status === "downloading"}
               />
-              <Box marginLeft={gap} flexShrink={0}>
+              <ListCell marginLeft={gap}>
                 <Text color={COLOR.dim}>{truncate(rightStats(it), statsW)}</Text>
-              </Box>
-            </Box>
+              </ListCell>
+            </ListRow>
           </Box>
         );
       })}
@@ -293,39 +288,30 @@ export function Downloads() {
         const ss = SOURCE_STYLE[h.source ?? "fitgirl"];
         const when = formatRelative(h.completedAt / 1000);
         return (
-          <Box key={h.id}>
-            <Box width={MARK} flexShrink={0}>
-              <Text color={COLOR.accent} bold>
-                {here ? ICON.pointer : ""}
-              </Text>
-            </Box>
-            <Box width={GUTTER} flexShrink={0}>
+          <ListRow key={h.id}>
+            <ListCell width={MARK}>
+              <ListPointer focused={here} />
+            </ListCell>
+            <ListCell width={GUTTER}>
               <Text color={here ? COLOR.good : COLOR.dim}>
                 {ICON.done}
               </Text>
-            </Box>
-            <Box flexGrow={1} minWidth={0}>
-                <Text
-                  wrap="truncate-end"
-                  bold={here}
-                  color={here ? "black" : COLOR.dim}
-                  backgroundColor={here ? COLOR.accent : undefined}
-                >
-                  {here ? ` ${cleanText(h.name)} ` : cleanText(h.name)}
-                </Text>
-            </Box>
-            <Box width={10} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+            </ListCell>
+            <ListCell flexGrow={1}>
+              <ListText text={h.name} focused={here} color={COLOR.dim} truncate />
+            </ListCell>
+            <ListCell width={10} marginLeft={1} justifyContent="flex-end">
               <Text color={COLOR.dim}>{h.sizeBytes > 0 ? formatBytes(h.sizeBytes) : "-"}</Text>
-            </Box>
-            <Box width={12} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+            </ListCell>
+            <ListCell width={12} marginLeft={1} justifyContent="flex-end">
               <Text color={COLOR.dim}>{when || "-"}</Text>
-            </Box>
-            <Box width={4} flexShrink={0} marginLeft={1} justifyContent="flex-end">
+            </ListCell>
+            <ListCell width={4} marginLeft={1} justifyContent="flex-end">
               <Text color={!h.source || !here ? COLOR.dim : ss.color}>
                 {h.source ? ss.tag : "mag"}
               </Text>
-            </Box>
-          </Box>
+            </ListCell>
+          </ListRow>
         );
       })}
     </Panel>
