@@ -77,14 +77,14 @@ export function Splash() {
       </Box>
       <Box marginTop={1}>
         <Text>
-          <Text color={COLOR.alt}>↵</Text>
+          <Text color="white">↵</Text>
           <Text color={COLOR.dim}> search</Text>
-          <Text color={COLOR.dim}>{`  ${ICON.dot}  `}</Text>
+          <Text color="white">{`  ${ICON.dot}  `}</Text>
           <Text color={COLOR.dim}>empty </Text>
-          <Text color={COLOR.alt}>↵</Text>
+          <Text color="white">↵</Text>
           <Text color={COLOR.dim}> browse</Text>
-          <Text color={COLOR.dim}>{`  ${ICON.dot}  `}</Text>
-          <Text color={COLOR.alt}>esc</Text>
+          <Text color="white">{`  ${ICON.dot}  `}</Text>
+          <Text color="white">esc</Text>
           <Text color={COLOR.dim}> quit</Text>
         </Text>
       </Box>

@@ -109,6 +109,21 @@ const THEMES: Record<string, typeof COLOR> = {
     logoBase: "#1d4ed8",
     logoShade: "#1e40af",
   },
+  hacker: {
+    accent: "#ffffff",
+    text: "#e5e7eb",
+    alt: "#9ca3af",
+    good: "#e5e7eb",
+    warn: "#9ca3af",
+    bad: "#4b5563",
+    bright: "#ffffff",
+    dim: "#374151",
+    logoHighlight: "#ffffff",
+    logoTop: "#d1d5db",
+    logoMid: "#9ca3af",
+    logoBase: "#6b7280",
+    logoShade: "#374151",
+  },
 };
 
 export const AVAILABLE_THEMES = Object.keys(THEMES);
