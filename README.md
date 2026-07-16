@@ -3,7 +3,7 @@
 
 ## Overview
 
-Windskye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
+WindSkye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
 
 <img width="1276" height="733" alt="image" src="https://github.com/user-attachments/assets/c5671cf2-2be3-4a7c-b8d2-5f5738cea1ef" />
 
@@ -14,7 +14,7 @@ Windskye provides a streamlined, zero-configuration command-line interface for q
 
 ## Quick Start
 
-You can launch Windskye immediately without installing it globally by using `npx`:
+You can launch WindSkye immediately without installing it globally by using `npx`:
 
 ```sh
 npx windskye
@@ -36,11 +36,11 @@ npx windskye path/to/file.torrent
 - **Modern TUI:** A highly responsive, keyboard-navigable terminal user interface built with React Ink.
 - **Background Processing:** Seamlessly queue multiple torrents. Downloads run persistently in the background while you continue to browse.
 - **Granular Controls:** Full control over active connections, bandwidth, and seed states.
-- **Privacy Focused:** Windskye interacts directly with the BitTorrent network. No central servers, no telemetry, no tracking.
+- **Privacy Focused:** WindSkye interacts directly with the BitTorrent network. No central servers, no telemetry, no tracking.
 
 ## Development
 
-To build Windskye from source and run it locally:
+To build WindSkye from source and run it locally:
 
 1. Clone the repository and navigate into the directory.
 2. Install dependencies:
@@ -64,4 +64,4 @@ Pull requests are welcome. Please ensure that all changes pass the TypeScript co
 
 ## Legal Disclaimer
 
-Windskye is a decentralized, peer-to-peer file sharing tool. Users are solely responsible for ensuring they have the legal right to download and distribute the content they interact with. The developers of Windskye do not endorse or support copyright infringement.
+WindSkye is a decentralized, peer-to-peer file sharing tool. Users are solely responsible for ensuring they have the legal right to download and distribute the content they interact with. The developers of WindSkye do not endorse or support copyright infringement.
