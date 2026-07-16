@@ -56,10 +56,12 @@ export function TextField({
 }: TextFieldProps) {
   const [value, setValue] = useState(defaultValue);
   const [cursor, setCursor] = useState(defaultValue.length);
+  const [selection, setSelection] = useState<[number, number] | null>(null);
 
   function apply(next: Edit): void {
     setValue(next.value);
     setCursor(Math.max(0, Math.min(next.value.length, next.cursor)));
+    setSelection(null);
     if (next.value !== value) onChange?.(next.value);
   }
 
@@ -82,23 +84,40 @@ export function TextField({
             apply({ value: "", cursor: 0 });
             return;
           case "w":
-            apply(deleteWordBefore(value, cursor));
+            if (selection) {
+              apply({ value: value.slice(0, selection[0]) + value.slice(selection[1]), cursor: selection[0] });
+            } else {
+              apply(deleteWordBefore(value, cursor));
+            }
             return;
           case "k":
-            apply(killToEnd(value, cursor));
+            if (selection) {
+              apply({ value: value.slice(0, selection[0]) + value.slice(selection[1]), cursor: selection[0] });
+            } else {
+              apply(killToEnd(value, cursor));
+            }
             return;
           case "a":
-            setCursor(0);
+            if (value.length > 0) {
+              setSelection([0, value.length]);
+              setCursor(value.length);
+            }
             return;
           case "e":
+            setSelection(null);
             setCursor(value.length);
             return;
           default:
-            return;
+            break;
         }
       }
 
       if (key.leftArrow) {
+        if (selection) {
+          setCursor(selection[0]);
+          setSelection(null);
+          return;
+        }
         if (cursor === 0) {
           onExitLeft?.();
           return;
@@ -107,16 +126,33 @@ export function TextField({
         return;
       }
       if (key.rightArrow) {
+        if (selection) {
+          setCursor(selection[1]);
+          setSelection(null);
+          return;
+        }
         setCursor(Math.min(value.length, cursor + 1));
         return;
       }
       if (key.backspace || key.delete) {
+        if (selection) {
+          apply({ value: value.slice(0, selection[0]) + value.slice(selection[1]), cursor: selection[0] });
+          return;
+        }
         apply(deleteBefore(value, cursor));
         return;
       }
-      if (key.meta || !input) return;
+      if (key.meta || key.ctrl || !input) return;
       const text = input.replace(/\x1b?\[<\d+;\d+;\d+[Mm]/g, "");
       if (!text) return;
+      
+      if (selection) {
+        const [start, end] = selection;
+        const newValue = value.slice(0, start) + text + value.slice(end);
+        apply({ value: newValue, cursor: start + text.length });
+        return;
+      }
+      
       apply(insertAt(value, cursor, text));
     },
     { isActive: !isDisabled },
@@ -124,6 +160,21 @@ export function TextField({
 
   if (isDisabled) {
     return value ? <Text>{value}</Text> : <Text color={COLOR.dim}>{placeholder}</Text>;
+  }
+
+  if (selection) {
+    const [start, end] = selection;
+    const before = value.slice(0, start);
+    const selected = value.slice(start, end) || CURSOR;
+    const after = value.slice(end);
+    
+    return (
+      <Text>
+        {before}
+        <Text inverse>{selected}</Text>
+        {after}
+      </Text>
+    );
   }
 
   if (value.length === 0) {

@@ -14,7 +14,7 @@ export function Settings() {
   
   const [cursor, setCursor] = useState(0);
   const [editing, setEditing] = useState(false);
-  const totalFields = 6;
+  const totalFields = 8;
 
   useInput(
     (input, key) => {
@@ -28,6 +28,13 @@ export function Settings() {
           setConfig({ ...config, theme: nextTheme });
         } else if (cursor === 5) { // Notifications toggling
           setConfig({ ...config, notifications: !config.notifications });
+        } else if (cursor === 6) { // Blinker toggling
+          setConfig({ ...config, enableBlinker: !config.enableBlinker });
+        } else if (cursor === 7) { // Gradient toggling
+          const options = ["original", "dark", "light"] as const;
+          const currentIndex = options.indexOf(config.blinkerGradient);
+          const nextGradient = options[wrapStep(currentIndex, 1, options.length)] || "light";
+          setConfig({ ...config, blinkerGradient: nextGradient });
         } else {
           setEditing(true);
         }
@@ -106,6 +113,8 @@ export function Settings() {
       {renderRow(3, "Upload Limit", String(config.uploadLimit), "uploadLimit")}
       {renderRow(4, "Theme", config.theme, "theme", false)}
       {renderRow(5, "Desktop Notifications", config.notifications ? "Enabled" : "Disabled", "notifications", false)}
+      {renderRow(6, "Logo Blinker", config.enableBlinker ? "Enabled" : "Disabled", "enableBlinker", false)}
+      {renderRow(7, "Blinker Gradient", config.blinkerGradient, "blinkerGradient", false)}
       
       <Box marginTop={2} paddingLeft={MARK}>
         <Text color={COLOR.dim}>

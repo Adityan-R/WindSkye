@@ -235,7 +235,7 @@ export function App({
       }
       setQuery(q);
       setView("browser");
-      if (section === "downloads") setSection("all");
+      if (q || section === "downloads") setSection("all");
       setRegion("content");
     },
     [section, startDownload],
@@ -514,8 +514,8 @@ export function App({
 
         {exitPrompt ? (
           <Box display={showHelp || editingFolder || pickingTorrent ? "none" : "flex"} paddingX={1} justifyContent="center">
-            <Text color={COLOR.warn} bold>
-              Press Ctrl+C again to exit.
+            <Text color={COLOR.accent} bold>
+              Press ctrl + c again to exit.
             </Text>
           </Box>
         ) : showFooter ? (

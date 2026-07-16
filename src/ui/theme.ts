@@ -133,7 +133,7 @@ export function lerpHex(a: string, b: string, t: number): string {
   const [ar, ag, ab] = rgb(a);
   const [br, bg, bb] = rgb(b);
   const c = (x: number, y: number) =>
-    Math.round(x + (y - x) * t)
+    Math.max(0, Math.min(255, Math.round(x + (y - x) * t)))
       .toString(16)
       .padStart(2, "0");
   return `#${c(ar, br)}${c(ag, bg)}${c(ab, bb)}`;

@@ -9,6 +9,8 @@ export interface Config {
   downloadLimit: number;
   uploadLimit: number;
   notifications: boolean;
+  enableBlinker: boolean;
+  blinkerGradient: "original" | "dark" | "light";
 }
 
 export const defaultConfig: Config = {
@@ -18,6 +20,8 @@ export const defaultConfig: Config = {
   downloadLimit: 0,
   uploadLimit: 0,
   notifications: true,
+  enableBlinker: true,
+  blinkerGradient: "original",
 };
 
 export async function loadConfig(): Promise<Config> {
@@ -38,6 +42,10 @@ export async function loadConfig(): Promise<Config> {
     if (typeof cfg.downloadLimit !== "number") cfg.downloadLimit = defaultConfig.downloadLimit;
     if (typeof cfg.uploadLimit !== "number") cfg.uploadLimit = defaultConfig.uploadLimit;
     if (typeof cfg.notifications !== "boolean") cfg.notifications = defaultConfig.notifications;
+    if (typeof cfg.enableBlinker !== "boolean") cfg.enableBlinker = defaultConfig.enableBlinker;
+    if (typeof cfg.blinkerGradient !== "string" || !["original", "dark", "light"].includes(cfg.blinkerGradient)) {
+      cfg.blinkerGradient = defaultConfig.blinkerGradient;
+    }
     return cfg as Config;
   } catch {
     return { ...defaultConfig };

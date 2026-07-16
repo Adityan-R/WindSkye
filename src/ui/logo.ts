@@ -1,9 +1,15 @@
-export const LOGO_LINES: readonly string[] = [
+export const OLD_LOGO_LINES: readonly string[] = [
   "                                ",
   " █ █ █ █ █▄ █ █▀▄ █▀▀ █ ▄ █ █ █▀▀",
   " ▀▄▀▄▀ █ █ ▀█ █▄▀ ▄▄█ █▀  ▀█▀ █▄▄",
 ];
 
-export const LOGO_WIDTH = Math.max(...LOGO_LINES.map((l) => [...l].length));
+export const LOGO_LINES: readonly string[] = [
+  "                                ",
+  " █ █ █ █ █▄ █ █▀▄ █▀▀ █ █ █ █ █▀▀",
+  " ▀▄▀▄▀ █ █ ▀█ █▄▀ ▄▄█ █▀▄ ▀█▀ █▀▄",
+];
+export const LOGO_WIDTH = Math.max(...LOGO_LINES.map((l) => [...l].length)) + 4;
 
-export const SPROUT_CELLS: ReadonlySet<string> = new Set([]);
+export const SPROUT_CELLS: ReadonlySet<string> = new Set(["0,7", "1,8"]);
+export const LIGHT_CELLS: ReadonlySet<string> = new Set(["2,31"]);

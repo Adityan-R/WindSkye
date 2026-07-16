@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { Box, Text, useInput, useStdin } from "ink";
 import { Logo } from "../components/Logo";
 import { SearchBar } from "../components/SearchBar";
@@ -13,10 +14,35 @@ const CATEGORIES = sourcesByGroup()
 export function Splash() {
   const { submitQuery, quitAll, cols, rows } = useStore();
   const { isRawModeSupported } = useStdin();
+  const [exitPrompt, setExitPrompt] = useState(false);
+  const exitTimer = useRef<NodeJS.Timeout | null>(null);
 
   useInput(
     (input, key) => {
-      if (key.escape || (key.ctrl && input === "c")) quitAll();
+      if (key.escape) {
+        quitAll();
+        return;
+      }
+      if (key.ctrl && input === "c") {
+        if (exitPrompt) {
+          quitAll();
+        } else {
+          setExitPrompt(true);
+          if (exitTimer.current) clearTimeout(exitTimer.current);
+          exitTimer.current = setTimeout(() => {
+            setExitPrompt(false);
+            exitTimer.current = null;
+          }, 1000);
+        }
+        return;
+      }
+      if (exitPrompt) {
+        setExitPrompt(false);
+        if (exitTimer.current) {
+          clearTimeout(exitTimer.current);
+          exitTimer.current = null;
+        }
+      }
     },
     { isActive: isRawModeSupported },
   );
@@ -32,7 +58,7 @@ export function Splash() {
       alignItems="center"
     >
       {showLogo ? (
-        <Logo />
+        <Logo pauseOnInput />
       ) : (
         <Text bold color={COLOR.accent}>
           Windskye
@@ -61,6 +87,13 @@ export function Splash() {
           <Text color={COLOR.alt}>esc</Text>
           <Text color={COLOR.dim}> quit</Text>
         </Text>
+      </Box>
+      <Box height={1} marginTop={1}>
+        {exitPrompt ? (
+          <Text color={COLOR.accent} bold>
+            Press ctrl + c again to exit.
+          </Text>
+        ) : null}
       </Box>
     </Box>
   );
