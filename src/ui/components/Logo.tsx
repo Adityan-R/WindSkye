@@ -38,6 +38,8 @@ export function Logo({ pauseOnInput = false }: LogoProps = {}) {
     }, 500));
   });
 
+  const [tick, setTick] = useState(0);
+
   useEffect(() => {
     if (typingTimer) return;
     const interval = setInterval(() => {
@@ -45,6 +47,12 @@ export function Logo({ pauseOnInput = false }: LogoProps = {}) {
     }, 500);
     return () => clearInterval(interval);
   }, [typingTimer]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((v) => v + 1), 50);
+    timer.unref?.();
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <Box flexDirection="column">
@@ -71,7 +79,18 @@ export function Logo({ pauseOnInput = false }: LogoProps = {}) {
 
               const tX = i / last;
               const factor = (tX + tY) / 2;
-              const color = getSheen(factor, config.blinkerGradient);
+              let color = getSheen(factor, config.blinkerGradient);
+
+              const cycle = tick % 140; // 40 ticks for animation (2s), 100 ticks delay (5s)
+              let sweepCenter = -2.0;
+              if (cycle < 40) {
+                sweepCenter = (cycle / 20) - 0.5;
+              }
+              const dist = Math.abs(factor - sweepCenter);
+              if (dist < 0.2) {
+                const intensity = 1 - (dist / 0.2);
+                color = lerpHex(color, "#ffffff", intensity * 0.8);
+              }
 
               if (LIGHT_CELLS.has(`${row},${i}`)) {
                 const darkerColor = lerpHex(color, COLOR.logoShade, 0.6);

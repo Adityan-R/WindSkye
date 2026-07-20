@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Text, useInput } from "ink";
 import { COLOR } from "../theme";
 
@@ -44,6 +44,66 @@ export function insertAt(value: string, cursor: number, text: string): Edit {
 }
 
 const CURSOR = " ";
+
+const PLACEHOLDERS = [
+  "Search or paste a magnet link…",
+  "Find your favorite Linux ISO…",
+  "Search for open source software…",
+  "Look up classic literature…",
+  "Find royalty free music…"
+];
+
+function TypingPlaceholder({ basePlaceholder }: { basePlaceholder: string }) {
+  const [textIndex, setTextIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [blink, setBlink] = useState(true);
+
+  const texts = basePlaceholder === "Search torrents…" || basePlaceholder === "Search or paste a magnet link…" 
+     ? PLACEHOLDERS 
+     : [basePlaceholder];
+
+  useEffect(() => {
+    const text = texts[textIndex % texts.length] || "";
+    let timer: NodeJS.Timeout;
+    
+    if (isDeleting) {
+      if (charIndex === 0) {
+        setIsDeleting(false);
+        setTextIndex((i) => i + 1);
+      } else {
+        timer = setTimeout(() => setCharIndex((c) => c - 1), 20);
+      }
+    } else {
+      if (charIndex === text.length) {
+        if (texts.length > 1) {
+          timer = setTimeout(() => setIsDeleting(true), 3000);
+        }
+      } else {
+        timer = setTimeout(() => setCharIndex((c) => c + 1), 50);
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [charIndex, isDeleting, textIndex, texts]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setBlink((b) => !b), 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const currentText = (texts[textIndex % texts.length] || "").slice(0, charIndex);
+  const firstChar = currentText[0] || " ";
+  const rest = currentText.slice(1);
+  const cursor = blink ? "_" : " ";
+
+  return (
+    <Text>
+      <Text inverse>{firstChar}</Text>
+      <Text color={COLOR.dim}>{rest}</Text>
+      <Text color={COLOR.dim}>{cursor}</Text>
+    </Text>
+  );
+}
 
 export function TextField({
   isDisabled = false,
@@ -179,12 +239,7 @@ export function TextField({
 
   if (value.length === 0) {
     if (placeholder) {
-      return (
-        <Text>
-          <Text inverse>{placeholder[0]}</Text>
-          <Text color={COLOR.dim}>{placeholder.slice(1)}</Text>
-        </Text>
-      );
+      return <TypingPlaceholder basePlaceholder={placeholder} />;
     }
     return <Text inverse>{CURSOR}</Text>;
   }
