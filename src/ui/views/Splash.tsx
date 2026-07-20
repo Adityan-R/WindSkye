@@ -38,7 +38,7 @@ function BreathingFooter() {
 }
 
 export function Splash() {
-  const { submitQuery, quitAll, cols, rows } = useStore();
+  const { submitQuery, quitAll, cols, rows, config } = useStore();
   const { isRawModeSupported } = useStdin();
   const [exitPrompt, setExitPrompt] = useState(false);
   const exitTimer = useRef<NodeJS.Timeout | null>(null);

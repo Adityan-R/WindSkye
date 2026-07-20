@@ -94,7 +94,7 @@ const THEMES: Record<string, typeof COLOR> = {
     logoBase: "#81a1c1",
     logoShade: "#5e81ac",
   },
-  light: {
+  vibrant: {
     accent: "#2563eb",
     text: "#0f172a",
     alt: "#3b82f6",

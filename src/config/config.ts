@@ -4,7 +4,7 @@ import { serializeWrites, writeJsonAtomic } from "../util/atomic";
 
 export interface Config {
   downloadDir: string;
-  theme: string;
+  theme: "default" | "hacker" | "vibrant";
   maxConns: number;
   downloadLimit: number;
   uploadLimit: number;

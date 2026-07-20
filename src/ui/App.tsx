@@ -273,7 +273,7 @@ export function App({
     (showFooter ? 1 : 0);
   const bodyH = Math.max(6, rows - 1 - chrome);
   const listRows = Math.max(4, bodyH);
-  const contentWidth = Math.max(24, cols - RAIL_WIDTH - 3);
+  const contentWidth = Math.max(24, cols - RAIL_WIDTH - 2);
   const ruleWidth = Math.max(10, cols - 2);
 
     const store: Store | null = useMemo(() => {
@@ -445,7 +445,11 @@ export function App({
   return (
     <StoreContext.Provider value={store}>
       <TabTitle />
-      <Box flexDirection="column" paddingX={1}>
+      <Box 
+        flexDirection="column" 
+        paddingX={1} 
+        height={Math.max(1, rows - 1)}
+      >
         <Box justifyContent="space-between">
           <Logo />
           {notice ? <Text color={COLOR.good}>{notice}</Text> : null}
