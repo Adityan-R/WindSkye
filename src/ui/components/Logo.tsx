@@ -81,10 +81,10 @@ export function Logo({ pauseOnInput = false }: LogoProps = {}) {
               const factor = (tX + tY) / 2;
               let color = getSheen(factor, config.blinkerGradient);
 
-              const cycle = tick % 140; // 40 ticks for animation (2s), 100 ticks delay (5s)
+              const cycle = tick % 160; // 60 ticks for animation (3s), 100 ticks delay (5s)
               let sweepCenter = -2.0;
-              if (cycle < 40) {
-                sweepCenter = (cycle / 20) - 0.5;
+              if (cycle < 60) {
+                sweepCenter = (cycle / 30) - 0.5;
               }
               const dist = Math.abs(factor - sweepCenter);
               if (dist < 0.2) {
