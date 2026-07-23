@@ -1,5 +1,8 @@
 <img width="615" height="132" alt="windskye_readme_header" src="https://github.com/user-attachments/assets/8857dfbb-3093-463b-b7ae-4338cc352128" />
 
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/Adityan-R/TorVault)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
@@ -10,7 +13,7 @@ WindSkye provides a streamlined, zero-configuration command-line interface for q
 
 ## Requirements
 
-- Node.js (v18 or higher)
+- Node.js (v22 or higher)
 
 ## Quick Start
 
@@ -38,6 +41,13 @@ npx windskye path/to/file.torrent
 - **Granular Controls:** Full control over active connections, bandwidth, and seed states.
 - **Privacy Focused:** WindSkye interacts directly with the BitTorrent network. No central servers, no telemetry, no tracking.
 
+## Tech Stack
+
+- **UI Framework:** React 19 + Ink 7 (Terminal Component System)
+- **Torrent Engine:** WebTorrent
+- **Language & Runtime:** TypeScript 6, Node.js (>=22)
+- **Bundler:** tsup
+
 ## Development
 
 To build WindSkye from source and run it locally:
@@ -60,8 +70,9 @@ node dist/cli.cjs
 
 ## Contributing
 
-Pull requests are welcome. Please ensure that all changes pass the TypeScript compiler checks and adhere to the existing code formatting standards.
+Pull requests are welcome. Please ensure that all changes pass the TypeScript compiler checks (`npm run typecheck`) and tests (`npm test`).
 
 ## Legal Disclaimer
 
 WindSkye is a decentralized, peer-to-peer file sharing tool. Users are solely responsible for ensuring they have the legal right to download and distribute the content they interact with. The developers of WindSkye do not endorse or support copyright infringement.
+
