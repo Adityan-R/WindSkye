@@ -92,15 +92,11 @@ function TypingPlaceholder({ basePlaceholder }: { basePlaceholder: string }) {
   }, []);
 
   const currentText = (texts[textIndex % texts.length] || "").slice(0, charIndex);
-  const firstChar = currentText[0] || " ";
-  const rest = currentText.slice(1);
-  const cursor = blink ? "_" : " ";
 
   return (
     <Text>
-      <Text inverse>{firstChar}</Text>
-      <Text color={COLOR.dim}>{rest}</Text>
-      <Text color={COLOR.dim}>{cursor}</Text>
+      <Text color={COLOR.dim}>{currentText}</Text>
+      {blink ? <Text inverse>{" "}</Text> : <Text color={COLOR.dim}> </Text>}
     </Text>
   );
 }
