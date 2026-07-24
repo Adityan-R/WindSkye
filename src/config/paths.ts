@@ -2,6 +2,9 @@ import os from "node:os";
 import path from "node:path";
 import envPaths from "env-paths";
 
+/**
+ * Application name constant used for directory resolution.
+ */
 export const APP_NAME = "windskye";
 
 const base = envPaths(APP_NAME, { suffix: "" });
@@ -13,8 +16,10 @@ const override = process.env.WINDSKYE_STATE_DIR;
 const dataDir = override ? path.join(override, "data") : base.data;
 const configDir = override ? path.join(override, "config") : base.config;
 
+/** Default directory where completed downloads are saved. */
 export const defaultDownloadDir = path.join(os.homedir(), "Downloads", APP_NAME);
 
+/** Path to the main application JSON configuration file. */
 export const configFile = path.join(configDir, "config.json");
 
 export const queueFile = path.join(dataDir, "queue.json");
