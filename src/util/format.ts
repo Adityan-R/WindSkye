@@ -1,3 +1,6 @@
+/**
+ * Formats a byte count into a human-readable string (e.g. 1024 => "1.00 KB").
+ */
 export function formatBytes(bytes?: number): string {
   if (bytes === undefined || !Number.isFinite(bytes) || bytes <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -22,6 +25,9 @@ const SIZE_UNITS: Record<string, number> = {
   TB: 1e12,
 };
 
+/**
+ * Parses a size string (e.g. "1.5 GiB", "500MB") into bytes.
+ */
 export function parseSize(s: string): number {
   const m = s.match(/([\d.]+)\s*([KMGT]?I?B)/i);
   if (!m) return 0;
