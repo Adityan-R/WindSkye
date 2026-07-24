@@ -102,6 +102,8 @@ function makeStore(
     setCreateFocus: noop,
     startDownload: noop,
     copyMagnet: noop,
+    updateInfo: null,
+    setUpdateInfo: noop,
     notice: null,
     setNotice: noop,
     quitAll: noop,

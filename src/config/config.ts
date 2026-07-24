@@ -2,15 +2,19 @@ import { promises as fs } from "node:fs";
 import { configFile, defaultDownloadDir } from "./paths";
 import { serializeWrites, writeJsonAtomic } from "../util/atomic";
 
+export type ThemeName = "default" | "hacker" | "vibrant";
+export type BlinkerGradient = "original" | "dark" | "light";
+
 export interface Config {
   downloadDir: string;
-  theme: "default" | "hacker" | "vibrant";
+  theme: ThemeName;
   maxConns: number;
   downloadLimit: number;
   uploadLimit: number;
   notifications: boolean;
   enableBlinker: boolean;
-  blinkerGradient: "original" | "dark" | "light";
+  blinkerGradient: BlinkerGradient;
+  checkForUpdates: boolean;
 }
 
 export const defaultConfig: Config = {
@@ -22,6 +26,7 @@ export const defaultConfig: Config = {
   notifications: true,
   enableBlinker: true,
   blinkerGradient: "original",
+  checkForUpdates: true,
 };
 
 export async function loadConfig(): Promise<Config> {
@@ -46,6 +51,7 @@ export async function loadConfig(): Promise<Config> {
     if (typeof cfg.blinkerGradient !== "string" || !["original", "dark", "light"].includes(cfg.blinkerGradient)) {
       cfg.blinkerGradient = defaultConfig.blinkerGradient;
     }
+    if (typeof cfg.checkForUpdates !== "boolean") cfg.checkForUpdates = defaultConfig.checkForUpdates;
     return cfg as Config;
   } catch {
     return { ...defaultConfig };

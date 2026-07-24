@@ -5,6 +5,7 @@ import { Panel } from "./Panel";
 import { TextField } from "./TextField";
 import { COLOR, ICON, AVAILABLE_THEMES } from "../theme";
 import { wrapStep } from "../move";
+import type { ThemeName } from "../../config/config";
 
 const MARK = 2;
 
@@ -14,9 +15,9 @@ export function Settings() {
   
   const [cursor, setCursor] = useState(0);
   const [editing, setEditing] = useState(false);
-  const totalFields = 8;
+  const totalFields = 9;
 
-  const [pendingTheme, setPendingTheme] = useState(config.theme);
+  const [pendingTheme, setPendingTheme] = useState<ThemeName>(config.theme);
 
   useEffect(() => {
     if (cursor !== 4) setPendingTheme(config.theme);
@@ -43,11 +44,11 @@ export function Settings() {
       else if (key.downArrow || input === "j") setCursor(wrapStep(cursor, 1, totalFields));
       else if (cursor === 4 && (key.leftArrow || input === "h")) {
         const currentIndex = AVAILABLE_THEMES.indexOf(pendingTheme);
-        setPendingTheme(AVAILABLE_THEMES[wrapStep(currentIndex, -1, AVAILABLE_THEMES.length)] || "default");
+        setPendingTheme((AVAILABLE_THEMES[wrapStep(currentIndex, -1, AVAILABLE_THEMES.length)] as ThemeName) || "default");
       }
       else if (cursor === 4 && (key.rightArrow || input === "l")) {
         const currentIndex = AVAILABLE_THEMES.indexOf(pendingTheme);
-        setPendingTheme(AVAILABLE_THEMES[wrapStep(currentIndex, 1, AVAILABLE_THEMES.length)] || "default");
+        setPendingTheme((AVAILABLE_THEMES[wrapStep(currentIndex, 1, AVAILABLE_THEMES.length)] as ThemeName) || "default");
       }
       else if (key.return || input === "e") {
         if (cursor === 4) { // Theme toggling
@@ -57,10 +58,12 @@ export function Settings() {
         } else if (cursor === 6) { // Blinker toggling
           setConfig({ ...config, enableBlinker: !config.enableBlinker });
         } else if (cursor === 7) { // Gradient toggling
-          const options = ["original", "dark", "vibrant"] as const;
+          const options = ["original", "dark", "light"] as const;
           const currentIndex = options.indexOf(config.blinkerGradient);
-          const nextGradient = options[wrapStep(currentIndex, 1, options.length)] || "vibrant";
+          const nextGradient = options[wrapStep(currentIndex, 1, options.length)] || "original";
           setConfig({ ...config, blinkerGradient: nextGradient });
+        } else if (cursor === 8) { // Check for updates toggling
+          setConfig({ ...config, checkForUpdates: !config.checkForUpdates });
         } else {
           setEditing(true);
         }
@@ -133,8 +136,6 @@ export function Settings() {
     );
   };
 
-
-
   return (
     <Panel title="settings" width={contentWidth} focused={focused} height={panelH}>
       {renderRow(0, "Download Directory", config.downloadDir, "downloadDir")}
@@ -145,6 +146,7 @@ export function Settings() {
       {renderRow(5, "Desktop Notifications", config.notifications ? "Enabled" : "Disabled", "notifications", false)}
       {renderRow(6, "Logo Blinker", config.enableBlinker ? "Enabled" : "Disabled", "enableBlinker", false)}
       {renderRow(7, "Blinker Gradient", config.blinkerGradient, "blinkerGradient", false)}
+      {renderRow(8, "Check for Updates", config.checkForUpdates ? "Enabled" : "Disabled", "checkForUpdates", false)}
       
       <Box marginTop={2} paddingLeft={MARK}>
         <Text color={COLOR.dim}>

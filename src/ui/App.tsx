@@ -42,6 +42,8 @@ import { openFileExplorer } from "../util/open";
 import { COLOR, ICON, applyTheme } from "./theme";
 import { useMouseWheel } from "./hooks/useMouseWheel";
 import type { SourceId } from "../sources/types";
+import { checkForUpdates, type UpdateResult } from "../util/update-checker";
+
 
 export function App({
   initialMagnet,
@@ -91,9 +93,27 @@ export function App({
   const [editingFolder, setEditingFolder] = useState(false);
   const [pickingTorrent, setPickingTorrent] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateResult | null>(null);
   const [exitPrompt, setExitPrompt] = useState(false);
   const exitTimer = useRef<NodeJS.Timeout | null>(null);
   const booting = useRef(false);
+
+  useEffect(() => {
+    if (!config) return;
+    let alive = true;
+    void (async () => {
+      const res = await checkForUpdates({ enabled: config.checkForUpdates });
+      if (!alive) return;
+      setUpdateInfo(res);
+      if (res.hasUpdate && res.latestVersion) {
+        setNotice(`Update available: v${res.latestVersion} (type :update or /update)`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [config?.checkForUpdates]);
+
 
   useEffect(() => {
     if (booting.current) return;
@@ -221,6 +241,24 @@ export function App({
   const submitQuery = useCallback(
     (raw: string) => {
       const q = raw.trim();
+      if (q === ":update" || q === "/update") {
+        setNotice("Checking for updates...");
+        void (async () => {
+          const res = await checkForUpdates({ force: true, enabled: true });
+          setUpdateInfo(res);
+          if (res.hasUpdate) {
+            setNotice(
+              `Update available! Current: v${res.currentVersion} -> Latest: v${res.latestVersion}${res.releaseUrl ? ` (${res.releaseUrl})` : ""}`
+            );
+          } else if (res.error) {
+            setNotice(`Update check failed: ${res.error}`);
+          } else {
+            setNotice(`Windskye v${res.currentVersion} is up to date.`);
+          }
+        })();
+        setView("browser");
+        return;
+      }
       if (q) {
         const magnet = parseMagnet(q);
         if (magnet) {
@@ -309,6 +347,8 @@ export function App({
       setPickingTorrent,
       startDownload,
       copyMagnet,
+      updateInfo,
+      setUpdateInfo,
       notice,
       setNotice,
       quitAll,
@@ -335,6 +375,7 @@ export function App({
     pickingTorrent,
     startDownload,
     copyMagnet,
+    updateInfo,
     notice,
     listRows,
     compact,
@@ -344,6 +385,7 @@ export function App({
     setConfig,
     quitAll,
   ]);
+
 
   useInput(
     (input, key) => {

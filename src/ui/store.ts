@@ -4,6 +4,7 @@ import type { DownloadQueue } from "../download/queue";
 import type { HistoryItem } from "../download/history";
 import type { QueueItem, SeedItem, CreatedItem } from "../download/types";
 import type { SourceGroup, SourceId } from "../sources/types";
+import type { UpdateResult } from "../util/update-checker";
 
 export type View = "splash" | "browser";
 
@@ -61,6 +62,9 @@ export interface Store {
     sizeBytes?: number;
   }) => void;
   copyMagnet: (input: { name: string; magnet: string }) => void;
+
+  updateInfo: UpdateResult | null;
+  setUpdateInfo: (info: UpdateResult | null) => void;
 
   notice: string | null;
   setNotice: (s: string | null) => void;
