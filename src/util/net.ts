@@ -37,6 +37,9 @@ function isAbortError(e: unknown): boolean {
   );
 }
 
+/**
+ * Parses HTTP Retry-After header values (seconds or HTTP-date).
+ */
 export function parseRetryAfter(
   value: string | null,
   nowMs = Date.now(),
@@ -49,6 +52,9 @@ export function parseRetryAfter(
   return undefined;
 }
 
+/**
+ * Calculates exponential backoff delay with random jitter.
+ */
 export function backoffDelay(
   attempt: number,
   baseMs: number,
@@ -62,6 +68,9 @@ export function backoffDelay(
   return jittered;
 }
 
+/**
+ * Performs resilient HTTP fetch requests with automatic retry on transient errors.
+ */
 export async function fetchResilient(
   url: string,
   opts: FetchResilientOptions = {},
