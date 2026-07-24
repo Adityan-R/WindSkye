@@ -17,13 +17,13 @@ WindSkye is a lightweight, zero-configuration terminal application for searching
 
 ## Quick Start
 
-You can launch WindSkye immediately without installing it globally by using `npx`:
+Launch WindSkye instantly without any global installation using `npx`:
 
 ```sh
 npx windskye
 ```
 
-Alternatively, you can provide initial arguments to bypass the startup screen:
+Alternatively, pass CLI arguments to jump straight into action:
 
 ```sh
 # Start a download immediately via magnet link
