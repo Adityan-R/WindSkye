@@ -1,9 +1,13 @@
+/** Represents parsed command line execution mode and arguments. */
 export type CliCommand =
   | { kind: "version" }
   | { kind: "help" }
   | { kind: "run"; initialMagnet?: string; initialTorrent?: string }
   | { kind: "invalid"; arg: string };
 
+/**
+ * Parses process command-line arguments into a structured CliCommand.
+ */
 export function parseCliArgs(argv: string[]): CliCommand {
   const args = argv.filter((a) => a.trim() !== "");
   if (args.length === 0) return { kind: "run" };
