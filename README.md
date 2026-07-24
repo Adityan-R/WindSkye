@@ -1,12 +1,12 @@
 <img width="615" height="132" alt="windskye_readme_header" src="https://github.com/user-attachments/assets/8857dfbb-3093-463b-b7ae-4338cc352128" />
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/Adityan-R/TorVault)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/Adityan-R/WindSkye)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
-WindSkye provides a streamlined, zero-configuration command-line interface for querying, managing, and downloading torrents. Designed for maximum efficiency and minimal resource footprint, it aggregates results from reputable indexing sources concurrently, providing real-time peer statistics and direct downloads straight from your terminal.
+WindSkye is a lightweight, zero-configuration terminal application for searching, tracking, and downloading torrents. Engineered for speed and minimal resource usage, it queries top indexing sources simultaneously, delivering real-time swarm statistics and seamless background downloads directly in your terminal.
 
 <img width="1276" height="733" alt="image" src="https://github.com/user-attachments/assets/c5671cf2-2be3-4a7c-b8d2-5f5738cea1ef" />
 
