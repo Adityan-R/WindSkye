@@ -1,6 +1,15 @@
 import { useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import { useStore, useQueueHistory, useSeeds, type SeedFocus } from "../store";
+import { 
+  useQueueContext,
+  useNavigationContext,
+  useLayoutContext,
+  useOverlayContext,
+  useFocusContext,
+  useQueueHistory, 
+  useSeeds, 
+  type SeedFocus 
+} from "../store";
 import { Panel } from "./Panel";
 import { ListRow, ListCell, ListText, ListPointer } from "./List";
 import { useListNavigation } from "../hooks/useListNavigation";
@@ -31,7 +40,11 @@ function statusCell(seed: SeedItem | undefined): { text: string; color?: string;
 }
 
 export function Seeding() {
-  const { queue, region, contentWidth, listRows, setNotice, setSeedFocus } = useStore();
+  const { queue } = useQueueContext();
+  const { region } = useNavigationContext();
+  const { contentWidth, listRows } = useLayoutContext();
+  const { setNotice } = useOverlayContext();
+  const { setSeedFocus } = useFocusContext();
   const history = useQueueHistory(queue);
   const seeds = useSeeds(queue);
   const focused = region === "content";

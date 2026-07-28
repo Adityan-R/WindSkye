@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Box, Text, useInput } from "ink";
-import { useStore, CATEGORIES } from "../store";
+import { 
+  CATEGORIES,
+  useNavigationContext,
+  useOverlayContext,
+  useQueueContext,
+  useLayoutContext
+} from "../store";
 import { Spinner } from "./Spinner";
 import { SearchBar } from "./SearchBar";
 import { Panel } from "./Panel";
@@ -111,18 +117,10 @@ function Detail({ r, width }: { r: TorrentResult; width: number }) {
 }
 
 export function Results() {
-  const {
-    query,
-    submitQuery,
-    section,
-    region,
-    setRegion,
-    setCaptureMode,
-    startDownload,
-    copyMagnet,
-    contentWidth,
-    listRows,
-  } = useStore();
+  const { query, submitQuery, section, region, setRegion } = useNavigationContext();
+  const { setCaptureMode } = useOverlayContext();
+  const { startDownload, copyMagnet } = useQueueContext();
+  const { contentWidth, listRows } = useLayoutContext();
 
   const search = useConcurrentSearch(query);
 

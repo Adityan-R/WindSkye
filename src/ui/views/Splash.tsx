@@ -3,7 +3,7 @@ import { Box, Text, useInput, useStdin } from "ink";
 import { Logo } from "../components/Logo";
 import { SearchBar } from "../components/SearchBar";
 import { LOGO_WIDTH } from "../logo";
-import { useStore } from "../store";
+import { useNavigationContext, useQueueContext, useLayoutContext, useConfigContext } from "../store";
 import { sourcesByGroup } from "../../sources/registry";
 import { COLOR, ICON, lerpHex } from "../theme";
 
@@ -38,7 +38,10 @@ function BreathingFooter() {
 }
 
 export function Splash() {
-  const { submitQuery, quitAll, cols, rows, config } = useStore();
+  const { submitQuery } = useNavigationContext();
+  const { quitAll } = useQueueContext();
+  const { cols, rows } = useLayoutContext();
+  const { config } = useConfigContext();
   const { isRawModeSupported } = useStdin();
   const [exitPrompt, setExitPrompt] = useState(false);
   const exitTimer = useRef<NodeJS.Timeout | null>(null);

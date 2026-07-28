@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { useStore, useCreatedItems, type CreateFocus } from "../store";
+import { 
+  useQueueContext,
+  useNavigationContext,
+  useLayoutContext,
+  useOverlayContext,
+  useFocusContext,
+  useCreatedItems, 
+  type CreateFocus 
+} from "../store";
 import { Panel } from "./Panel";
 import { ListRow, ListCell, ListText, ListPointer } from "./List";
 import { useListNavigation } from "../hooks/useListNavigation";
@@ -33,10 +41,11 @@ function statusCell(item: CreatedItem): { text: string; color?: string; dim: boo
 }
 
 export function Create() {
-  const {
-    queue, region, contentWidth, listRows,
-    setNotice, setCreateFocus, setCaptureMode,
-  } = useStore();
+  const { queue } = useQueueContext();
+  const { region } = useNavigationContext();
+  const { contentWidth, listRows } = useLayoutContext();
+  const { setNotice, setCaptureMode } = useOverlayContext();
+  const { setCreateFocus } = useFocusContext();
   const items = useCreatedItems(queue);
   const focused = region === "content";
 

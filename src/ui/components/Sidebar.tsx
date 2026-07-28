@@ -1,5 +1,5 @@
 import { Box, Text, useInput } from "ink";
-import { useStore, useQueueItems, useCreatedItems, CATEGORIES, type Section } from "../store";
+import { useNavigationContext, useQueueContext, useQueueItems, useCreatedItems, CATEGORIES, type Section } from "../store";
 import { wrapStep } from "../move";
 import { ACCENT_RAMP, COLOR, GUTTER, ICON, RULE } from "../theme";
 
@@ -31,7 +31,8 @@ export const RAIL_WIDTH =
   GUTTER + Math.max(...NAV.map((n) => n.label.length + (BADGED(n.key) ? BADGE_W : 0)));
 
 export function Sidebar() {
-  const { section, setSection, region, setRegion, queue } = useStore();
+  const { section, setSection, region, setRegion } = useNavigationContext();
+  const { queue } = useQueueContext();
   const focused = region === "sidebar";
   const idx = Math.max(0, NAV.findIndex((n) => n.key === section));
   useQueueItems(queue);

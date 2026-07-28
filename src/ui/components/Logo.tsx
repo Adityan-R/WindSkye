@@ -2,7 +2,7 @@ import { Box, Text, useInput } from "ink";
 import { useState, useEffect } from "react";
 import { LOGO_LINES, SPROUT_CELLS, LIGHT_CELLS } from "../logo";
 import { COLOR, lerpHex } from "../theme";
-import { useStore } from "../store";
+import { useConfigContext } from "../store";
 
 function getSheen(t: number, style?: "original" | "dark" | "light"): string {
   if (t < 0.15) return lerpHex(COLOR.logoHighlight, COLOR.logoTop, t / 0.15);
@@ -23,7 +23,7 @@ interface LogoProps {
 }
 
 export function Logo({ pauseOnInput = false }: LogoProps = {}) {
-  const { config } = useStore();
+  const { config } = useConfigContext();
   const rows = LOGO_LINES.length;
 
   const [showCursor, setShowCursor] = useState(true);

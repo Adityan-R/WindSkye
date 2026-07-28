@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import path from "node:path";
-import { useStore, useQueueItems, useQueueHistory, type DownloadFocus, type CaptureMode } from "../store";
+import { 
+  useQueueContext, 
+  useNavigationContext, 
+  useLayoutContext, 
+  useFocusContext, 
+  useOverlayContext, 
+  useQueueItems, 
+  useQueueHistory, 
+  type DownloadFocus, 
+  type CaptureMode 
+} from "../store";
 import { openFileExplorer } from "../../util/open";
 import { FileSelection } from "./FileSelection";
 import { Panel } from "./Panel";
@@ -48,7 +58,12 @@ function rightStats(it: QueueItem): string {
 }
 
 export function Downloads() {
-  const { queue, region, contentWidth, listRows, startDownload, setDownloadFocus, setCaptureMode } = useStore();
+  const { queue, startDownload } = useQueueContext();
+  const { region } = useNavigationContext();
+  const { contentWidth, listRows } = useLayoutContext();
+  const { setDownloadFocus } = useFocusContext();
+  const { setCaptureMode } = useOverlayContext();
+
   const active = useQueueItems(queue);
   const recent = useQueueHistory(queue);
   const focused = region === "content";

@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 import { HELP_GROUPS } from "../keymap";
-import { useStore } from "../store";
+import { useLayoutContext } from "../store";
 import { COLOR, RULE, lerpHex } from "../theme";
 
 const CARD_BORDER = lerpHex(COLOR.accent, RULE, 0.55);
@@ -18,7 +18,7 @@ const CARD_W =
 const KEY_W_STACKED = Math.max(...KEY_W);
 
 export function HelpOverlay() {
-  const { cols } = useStore();
+  const { cols } = useLayoutContext();
   const columns = cols >= CARD_W;
 
   return (

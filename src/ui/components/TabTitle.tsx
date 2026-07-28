@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { useStore, useQueueItems } from "../store";
+import { useQueueContext, useQueueItems } from "../store";
 
 export function TabTitle() {
-  const { queue } = useStore();
+  const { queue } = useQueueContext();
   useQueueItems(queue);
   const active = queue.activeCount;
 

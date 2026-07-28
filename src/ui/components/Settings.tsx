@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import { useStore } from "../store";
+import { useConfigContext, useNavigationContext, useLayoutContext, useOverlayContext } from "../store";
 import { Panel } from "./Panel";
 import { TextField } from "./TextField";
 import { COLOR, ICON, AVAILABLE_THEMES } from "../theme";
@@ -10,7 +10,10 @@ import type { ThemeName } from "../../config/config";
 const MARK = 2;
 
 export function Settings() {
-  const { config, setConfig, region, contentWidth, listRows, setCaptureMode } = useStore();
+  const { config, setConfig } = useConfigContext();
+  const { region } = useNavigationContext();
+  const { contentWidth, listRows } = useLayoutContext();
+  const { setCaptureMode } = useOverlayContext();
   const focused = region === "content";
   
   const [cursor, setCursor] = useState(0);
