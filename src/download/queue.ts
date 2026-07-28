@@ -1,306 +1,78 @@
 import { EventEmitter } from "node:events";
-import { existsSync } from "node:fs";
-import path from "node:path";
-import { TorrentEngine, type AddHandlers } from "./engine";
-import {
-  saveQueue,
-  saveQueueSync,
-  saveSeeds,
-  saveSeedsSync,
-  saveCreated,
-  saveCreatedSync,
-  saveTorrentMeta,
-  torrentMetaPath,
-  torrentMetaExists,
-  deleteTorrentMeta,
-  type SeedRecord,
-  type CreatedRecord,
-} from "./persist";
-import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
+import { TorrentEngine } from "./engine";
+import { DownloadManager, type AddInput } from "./managers/download";
+import { SeedManager } from "./managers/seed";
+import { HistoryManager } from "./managers/history";
+import { CreateManager } from "./managers/create";
 import type { QueueItem, SeedItem, CreatedItem } from "./types";
-import type { SourceId } from "../sources/types";
+import type { HistoryItem } from "./history";
+import type { SeedRecord, CreatedRecord } from "./persist";
 import { notify } from "../util/notify";
 
-/**
- * A real seed never pulls data off the network: verifying on-disk files reads
- * the disk (network speed stays 0), only fetching *missing* data raises it. So
- * sustained network download on a "seed" means its files are gone or partial.
- * Size-agnostic (a 50 GB verify never trips it) and cross-platform (webtorrent
- * owns the real on-disk paths, so we never guess sanitized filenames).
- */
-export function strayDownload(s: { total: number; progress: number; speed: number }): boolean {
-  return s.total > 0 && s.progress < 1 && s.speed > 0;
-}
-
-const STRAY_TICKS = 2; // consecutive stray polls before flagging missing (~1s)
-
-// How long (ms) to let webtorrent verify on-disk pieces before the stray-download
-// detector starts watching. Verification reads the disk and can briefly report
-// downloadSpeed > 0 / progress < 1, which is indistinguishable from a truly
-// missing file. 10 s covers most single-torrent verifications comfortably.
-const SEED_GRACE_MS = 10_000;
-
 const POLL_MS = 500;
-const HISTORY_MAX = 500;
 
-export interface AddInput {
-  id: string;
-  name: string;
-  magnet: string;
-  source?: SourceId;
-  sizeBytes?: number;
-}
+export type { AddInput };
+export { strayDownload } from "./managers/seed";
 
 export class DownloadQueue extends EventEmitter {
-  private items = new Map<string, QueueItem>();
   private engine = new TorrentEngine();
   private poll: ReturnType<typeof setInterval> | null = null;
-  private history: HistoryItem[] = [];
-  private seeds = new Map<string, SeedItem>();
-  private created = new Map<string, CreatedItem>();
-  private strayHits = new Map<string, number>();
-  private seedStartedAt = new Map<string, number>();
   private notificationsEnabled = true;
+  
+  private downloadManager: DownloadManager;
+  private seedManager: SeedManager;
+  private historyManager: HistoryManager;
+  private createManager: CreateManager;
+
+  constructor() {
+    super();
+    
+    this.historyManager = new HistoryManager(() => this.changed());
+    
+    this.seedManager = new SeedManager({
+      engine: this.engine,
+      onChange: () => this.changed(),
+      ensurePoll: () => this.ensurePoll(),
+      maybeStopPoll: () => this.maybeStopPoll(),
+      onMissing: (id, name) => {
+        if (this.notificationsEnabled) notify("Torrent Error", `${name}: File missing`);
+      }
+    });
+
+    this.downloadManager = new DownloadManager({
+      engine: this.engine,
+      onChange: () => this.changed(),
+      ensurePoll: () => this.ensurePoll(),
+      maybeStopPoll: () => this.maybeStopPoll(),
+      onComplete: (it) => {
+        this.historyManager.record(it);
+        this.seedManager.adoptAsSeed(it);
+        this.emit("completed", it.name);
+        if (this.notificationsEnabled) notify("Download Completed", it.name);
+      },
+      onError: (id, name, msg) => {
+        if (this.notificationsEnabled) notify("Download Failed", `${name}: ${msg}`);
+      },
+      onNewDownload: (name) => {
+        if (this.notificationsEnabled) notify("Torrent Added", name);
+      }
+    });
+    
+    this.createManager = new CreateManager({
+      engine: this.engine,
+      onChange: () => this.changed(),
+      ensurePoll: () => this.ensurePoll(),
+      maybeStopPoll: () => this.maybeStopPoll(),
+    });
+  }
 
   applyConfig(config: { maxConns: number; downloadLimit: number; uploadLimit: number; notifications: boolean }): void {
     this.engine.setConfig(config.maxConns, config.downloadLimit, config.uploadLimit);
     this.notificationsEnabled = config.notifications;
   }
 
-  getItems(): QueueItem[] {
-    return [...this.items.values()].sort((a, b) => b.addedAt - a.addedAt);
-  }
-
-  get activeCount(): number {
-    let n = 0;
-    for (const it of this.items.values()) if (it.status === "downloading") n++;
-    return n;
-  }
-
-  has(id: string): boolean {
-    return this.items.has(id);
-  }
-
-  add(input: AddInput, dir: string): void {
-    if (this.seeds.has(input.id)) {
-      this.engine.remove(input.id);
-      this.seeds.delete(input.id);
-      this.strayHits.delete(input.id);
-      this.seedStartedAt.delete(input.id);
-      void this.persistSeeds();
-    }
-    const existing = this.items.get(input.id);
-    if (existing && existing.status !== "failed") return;
-    
-    const isNew = !existing;
-    const item: QueueItem = existing
-      ? { ...existing, status: "downloading", error: undefined, speed: 0 }
-      : {
-          id: input.id,
-          name: input.name,
-          source: input.source,
-          magnet: input.magnet,
-          dir,
-          status: "downloading",
-          progress: 0,
-          totalBytes: input.sizeBytes ?? 0,
-          downloadedBytes: 0,
-          speed: 0,
-          peers: 0,
-          addedAt: Date.now(),
-        };
-    this.items.set(item.id, item);
-    this.startEngine(item);
-    this.ensurePoll();
-    this.changed();
-    void this.persist();
-
-    if (isNew && this.notificationsEnabled) {
-      notify("Torrent Added", item.name || "Unknown Torrent");
-    }
-  }
-
-  private startEngine(item: QueueItem): void {
-    const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
-    this.engine.add(item.id, source, item.dir, this.engineHandlers(item.id), {
-      selectedFiles: item.selectedFiles,
-      sequential: item.sequential,
-    });
-  }
-
-  // One torrent serves an item across its whole life (download -> seed ->
-  // missing), so the engine handlers are phase-aware: they look up the id in
-  // `items` (still downloading) or `seeds` (finished, now seeding) and act on
-  // whichever it currently is.
-  private engineHandlers(id: string): AddHandlers {
-    return {
-      onMetadata: (meta) => {
-        // Capture the .torrent metadata as soon as it arrives so a later re-seed
-        // can verify the on-disk file locally (a bare magnet would have to
-        // re-fetch this from the swarm, which fails for rare/dead torrents).
-        if (meta.torrentFile) void saveTorrentMeta(id, meta.torrentFile);
-        const it = this.items.get(id);
-        if (!it) return; // the rest only matters while still downloading
-        if (meta.name) it.name = meta.name;
-        if (meta.total) it.totalBytes = meta.total;
-        it.files = meta.files.length;
-        it.fileList = meta.files;
-
-        if (!it.selectedFiles) {
-          it.status = "selecting_files";
-        }
-
-        this.changed();
-        void this.persist();
-      },
-      onDone: () => {
-        const it = this.items.get(id);
-        if (it) {
-          // Download finished: record it and keep the torrent seeding.
-          if (it.totalBytes) it.downloadedBytes = it.totalBytes;
-          this.complete(it);
-          return;
-        }
-        // A re-seed (restart / manual resume) passed verification: the file is
-        // confirmed on disk, so clear stray-detection state and end its grace.
-        if (this.seeds.has(id)) {
-          this.strayHits.set(id, 0);
-          this.seedStartedAt.delete(id);
-        }
-      },
-      onError: (msg) => {
-        const it = this.items.get(id);
-        if (it) {
-          it.status = "failed";
-          it.error = msg;
-          it.speed = 0;
-          it.peers = 0;
-          this.changed();
-          void this.persist();
-          this.maybeStopPoll();
-          if (this.notificationsEnabled) {
-            notify("Download Failed", `${it.name}: ${msg}`);
-          }
-          return;
-        }
-        const sd = this.seeds.get(id);
-        if (sd) {
-          sd.status = "missing";
-          sd.uploadSpeed = 0;
-          sd.peers = 0;
-          this.seedStartedAt.delete(id);
-          this.changed();
-          void this.persistSeeds();
-          this.maybeStopPoll();
-          if (this.notificationsEnabled) {
-            notify("Torrent Error", `${sd.name}: ${msg}`);
-          }
-        }
-      },
-    };
-  }
-
-  private complete(it: QueueItem): void {
-    this.recordHistory(it);
-    this.items.delete(it.id);
-    // Opt-out seeding: a finished download is already a complete, verified
-    // torrent, so keep it alive and seeding instead of tearing it down.
-    this.beginSeed(it);
-    this.emit("completed", it.name);
-    this.changed();
-    void this.persist();
-    this.maybeStopPoll();
-    if (this.notificationsEnabled) {
-      notify("Download Completed", it.name);
-    }
-  }
-
-  // Adopt the just-finished download's live torrent as a seed in place: no
-  // re-add, no re-verify (progress is already 1, so stray detection never
-  // trips). Restart / manual resume go through startSeeding instead.
-  private beginSeed(it: QueueItem): void {
-    if (!it.magnet) return;
-    this.seeds.set(it.id, {
-      id: it.id,
-      name: it.name,
-      source: it.source,
-      magnet: it.magnet,
-      dir: it.dir,
-      sizeBytes: it.totalBytes,
-      status: "seeding",
-      uploadSpeed: 0,
-      uploaded: 0,
-      peers: 0,
-    });
-    this.strayHits.set(it.id, 0);
-    this.seedStartedAt.set(it.id, Date.now());
-    this.ensurePoll();
-    void this.persistSeeds();
-  }
-
-  private tick(): void {
-    let any = false;
-    for (const it of this.items.values()) {
-      if (it.status !== "downloading") continue;
-      const s = this.engine.stats(it.id);
-      if (!s) continue;
-      it.progress = Math.min(100, Math.round(s.progress * 100));
-      it.downloadedBytes = s.downloaded;
-      if (s.total) it.totalBytes = s.total;
-      it.speed = s.speed;
-      it.peers = s.peers;
-      it.eta =
-        s.timeRemaining > 0 && Number.isFinite(s.timeRemaining)
-          ? s.timeRemaining / 1000
-          : undefined;
-      if (s.name) it.name = s.name;
-      any = true;
-    }
-    const now = Date.now();
-    for (const sd of this.seeds.values()) {
-      if (sd.status !== "seeding") continue;
-      const s = this.engine.stats(sd.id);
-      if (!s) continue;
-      // Safety-net: a seed that's pulling data has lost its files on disk. Give
-      // it a couple of ticks (ignore a one-piece repair blip), then stop it and
-      // flag missing, never re-download the whole thing.
-      //
-      // Skip seeds still inside the grace period: webtorrent needs time to
-      // hash-verify on-disk pieces, and during that window progress < 1 with
-      // downloadSpeed > 0 is perfectly normal.
-      const age = now - (this.seedStartedAt.get(sd.id) ?? 0);
-      if (age > SEED_GRACE_MS && strayDownload(s)) {
-        const hits = (this.strayHits.get(sd.id) ?? 0) + 1;
-        this.strayHits.set(sd.id, hits);
-        if (hits >= STRAY_TICKS) {
-          this.engine.remove(sd.id);
-          this.strayHits.delete(sd.id);
-          this.seedStartedAt.delete(sd.id);
-          sd.status = "missing";
-          sd.uploadSpeed = 0;
-          sd.peers = 0;
-          void this.persistSeeds();
-        }
-        any = true;
-        continue;
-      }
-      this.strayHits.set(sd.id, 0);
-      sd.uploadSpeed = s.uploadSpeed;
-      sd.uploaded = s.uploaded;
-      sd.peers = s.peers;
-      any = true;
-    }
-    // Poll user-created torrents.
-    for (const c of this.created.values()) {
-      if (c.status !== "seeding") continue;
-      const s = this.engine.stats(c.id);
-      if (!s) continue;
-      c.uploadSpeed = s.uploadSpeed;
-      c.uploaded = s.uploaded;
-      c.peers = s.peers;
-      any = true;
-    }
-    if (any) this.changed();
+  private changed(): void {
+    this.emit("update");
   }
 
   private ensurePoll(): void {
@@ -316,496 +88,82 @@ export class DownloadQueue extends EventEmitter {
     }
   }
 
-  pause(id: string): void {
-    const it = this.items.get(id);
-    if (!it || it.status !== "downloading") return;
-    it.status = "paused";
-    it.speed = 0;
-    it.peers = 0;
-    it.eta = undefined;
-    this.engine.remove(id);
-    this.changed();
-    void this.persist();
-    this.maybeStopPoll();
+  private tick(): void {
+    const d = this.downloadManager.tick();
+    const s = this.seedManager.tick();
+    const c = this.createManager.tick();
+    if (d || s || c) this.changed();
   }
 
-  resume(id: string): void {
-    const it = this.items.get(id);
-    if (!it || it.status !== "paused") return;
-    it.status = "downloading";
-    this.startEngine(it);
-    this.ensurePoll();
-    this.changed();
-    void this.persist();
+  // --- Facade: Downloads ---
+  getItems(): QueueItem[] { return this.downloadManager.getAll(); }
+  get activeCount(): number { return this.downloadManager.activeCount; }
+  has(id: string): boolean { return this.downloadManager.has(id); }
+  add(input: AddInput, dir: string): void {
+    if (this.seedManager.has(input.id)) this.seedManager.remove(input.id);
+    this.downloadManager.add(input, dir);
   }
+  pause(id: string): void { this.downloadManager.pause(id); }
+  resume(id: string): void { this.downloadManager.resume(id); }
+  togglePause(id: string): void { this.downloadManager.togglePause(id); }
+  cancel(id: string): void { this.downloadManager.cancel(id); }
+  commitSelection(id: string, files: number[], seq: boolean): void { this.downloadManager.commitSelection(id, files, seq); }
+  retry(id: string): void { this.downloadManager.retry(id); }
+  retryFailed(): void { this.downloadManager.retryFailed(); }
+  restore(items: QueueItem[]): void { this.downloadManager.restore(items); }
 
-  togglePause(id: string): void {
-    const it = this.items.get(id);
-    if (!it) return;
-    if (it.status === "downloading") this.pause(id);
-    else if (it.status === "paused") this.resume(id);
-  }
-
-  cancel(id: string): void {
-    if (!this.items.has(id)) return;
-    this.engine.remove(id);
-    this.items.delete(id);
-    deleteTorrentMeta(id);
-    this.changed();
-    void this.persist();
-    this.maybeStopPoll();
-  }
-
-  commitSelection(id: string, selectedFiles: number[], sequential: boolean): void {
-    const it = this.items.get(id);
-    if (!it || it.status !== "selecting_files") return;
-    it.selectedFiles = selectedFiles;
-    it.sequential = sequential;
-    it.status = "downloading";
-    this.engine.remove(id);
-    this.startEngine(it);
-    this.ensurePoll();
-    this.changed();
-    void this.persist();
-  }
-
-  retry(id: string): void {
-    const it = this.items.get(id);
-    if (!it || it.status !== "failed") return;
-    it.status = "downloading";
-    it.error = undefined;
-    this.startEngine(it);
-    this.ensurePoll();
-    this.changed();
-    void this.persist();
-  }
-
-  retryFailed(): void {
-    for (const it of [...this.items.values()]) {
-      if (it.status === "failed") this.retry(it.id);
-    }
-  }
-
-  getSeed(id: string): SeedItem | undefined {
-    return this.seeds.get(id);
-  }
-
-  getSeeds(): SeedItem[] {
-    return [...this.seeds.values()];
-  }
-
-  get seedingCount(): number {
-    let n = 0;
-    for (const s of this.seeds.values()) if (s.status === "seeding") n++;
-    return n;
-  }
-
+  // --- Facade: Seeds ---
+  getSeed(id: string): SeedItem | undefined { return this.seedManager.get(id); }
+  getSeeds(): SeedItem[] { return this.seedManager.getAll(); }
+  get seedingCount(): number { return this.seedManager.activeCount; }
   startSeeding(h: HistoryItem): void {
-    if (this.seeds.get(h.id)?.status === "seeding") return;
-    if (this.items.has(h.id)) return; // don't seed a file that's downloading
-
-    const base: SeedItem = {
-      id: h.id,
-      name: h.name,
-      source: h.source,
-      magnet: h.magnet,
-      dir: h.dir,
-      sizeBytes: h.sizeBytes,
-      status: "seeding",
-      uploadSpeed: 0,
-      uploaded: 0,
-      peers: 0,
-    };
-
-    // Only hard guard we can make synchronously and portably: no magnet, no seed.
-    // We do NOT guess the on-disk path (webtorrent sanitizes names per-OS); we
-    // let it verify the real files and the poll safety-net flags a missing one.
-    if (!h.magnet) {
-      this.seeds.set(h.id, { ...base, status: "missing" });
-      this.changed();
-      void this.persistSeeds();
-      return;
-    }
-
-    this.seeds.set(h.id, base);
-    this.strayHits.set(h.id, 0);
-    this.seedStartedAt.set(h.id, Date.now());
-    // Seed from the stored .torrent metadata when we have it (verifies the local
-    // file immediately, no swarm needed); fall back to the magnet otherwise.
-    const source = torrentMetaExists(h.id) ? torrentMetaPath(h.id) : h.magnet;
-    this.engine.add(h.id, source, h.dir, this.engineHandlers(h.id));
-    this.ensurePoll();
-    this.changed();
-    void this.persistSeeds();
+    if (this.downloadManager.has(h.id)) return;
+    this.seedManager.startSeeding(h);
+  }
+  stopSeeding(id: string): void { this.seedManager.stopSeeding(id); }
+  toggleSeeding(h: HistoryItem): void { this.seedManager.toggleSeeding(h); }
+  restoreSeeds(records: SeedRecord[]): void { 
+    this.seedManager.restore(records, (id) => this.historyManager.getById(id)); 
   }
 
-  stopSeeding(id: string): void {
-    const s = this.seeds.get(id);
-    if (!s) return;
-    this.engine.remove(id);
-    this.strayHits.delete(id);
-    this.seedStartedAt.delete(id);
-    if (s.status === "seeding") {
-      s.status = "paused";
-      s.uploadSpeed = 0;
-      s.peers = 0;
-    }
-    this.changed();
-    void this.persistSeeds();
-    this.maybeStopPoll();
-  }
-
-  toggleSeeding(h: HistoryItem): void {
-    if (this.seeds.get(h.id)?.status === "seeding") this.stopSeeding(h.id);
-    else this.startSeeding(h);
-  }
-
-  restoreSeeds(records: SeedRecord[]): void {
-    for (const r of records) {
-      const h = this.history.find((x) => x.id === r.id);
-      if (!h) continue;
-      // Respect the persisted choice: resume seeders, but leave a paused seed
-      // paused (and visibly so) instead of auto-starting it.
-      if (r.status === "seeding") this.startSeeding(h);
-      else this.restorePaused(h);
-    }
-  }
-
-  // Rebuild a paused seed from history without touching the engine, so it shows
-  // as paused and stays off until the user presses p to resume it.
-  private restorePaused(h: HistoryItem): void {
-    if (this.seeds.has(h.id)) return;
-    this.seeds.set(h.id, {
-      id: h.id,
-      name: h.name,
-      source: h.source,
-      magnet: h.magnet,
-      dir: h.dir,
-      sizeBytes: h.sizeBytes,
-      status: "paused",
-      uploadSpeed: 0,
-      uploaded: 0,
-      peers: 0,
-    });
-    this.changed();
-  }
-
-  private seedRecords(): SeedRecord[] {
-    const out: SeedRecord[] = [];
-    for (const s of this.seeds.values()) {
-      // "missing" is a runtime detection (file gone); persist it as paused so we
-      // remember the user had it without auto-seeding a file that isn't there.
-      if (s.status === "seeding") out.push({ id: s.id, status: "seeding" });
-      else out.push({ id: s.id, status: "paused" });
-    }
-    return out;
-  }
-
-  private persistSeeds(): Promise<void> {
-    return saveSeeds(this.seedRecords()).catch(() => {});
-  }
-
-  restore(items: QueueItem[]): void {
-    for (const raw of items) {
-      this.items.set(raw.id, raw);
-      if (raw.status === "downloading") this.startEngine(raw);
-    }
-    if (this.activeCount > 0) this.ensurePoll();
-    this.changed();
-  }
-
-  restoreHistory(items: HistoryItem[]): void {
-    this.history = items.slice(0, HISTORY_MAX);
-  }
-
-  getHistory(): HistoryItem[] {
-    return this.history;
-  }
-
-  private recordHistory(it: QueueItem): void {
-    const rec: HistoryItem = {
-      id: it.id,
-      name: it.name,
-      source: it.source,
-      sizeBytes: it.totalBytes,
-      magnet: it.magnet,
-      dir: it.dir,
-      completedAt: Date.now(),
-    };
-    this.history = [rec, ...this.history.filter((h) => h.id !== it.id)].slice(0, HISTORY_MAX);
-    void saveHistory(this.history).catch(() => {});
-  }
-
+  // --- Facade: History ---
+  restoreHistory(items: HistoryItem[]): void { this.historyManager.restore(items); }
+  getHistory(): HistoryItem[] { return this.historyManager.get(); }
   removeHistory(id: string): void {
-    const next = this.history.filter((h) => h.id !== id);
-    if (next.length === this.history.length) return;
-    this.history = next;
-    if (this.seeds.has(id)) {
-      this.engine.remove(id);
-      this.seeds.delete(id);
-      this.strayHits.delete(id);
-      this.seedStartedAt.delete(id);
-      void this.persistSeeds();
-      this.maybeStopPoll();
+    if (this.historyManager.remove(id)) {
+      this.seedManager.remove(id);
     }
-    deleteTorrentMeta(id);
-    void saveHistory(this.history).catch(() => {});
-    this.changed();
   }
-
   clearHistory(): void {
-    if (this.history.length === 0) return;
-    for (const h of this.history) deleteTorrentMeta(h.id);
-    this.history = [];
-    if (this.seeds.size > 0) {
-      for (const id of this.seeds.keys()) this.engine.remove(id);
-      this.seeds.clear();
-      this.strayHits.clear();
-      this.seedStartedAt.clear();
-      void this.persistSeeds();
-      this.maybeStopPoll();
+    if (this.historyManager.clear()) {
+      this.seedManager.clear();
     }
-    void saveHistory(this.history).catch(() => {});
-    this.changed();
   }
 
-  private changed(): void {
-    this.emit("update");
-  }
+  // --- Facade: Create ---
+  createTorrent(filePath: string): string | null { return this.createManager.createTorrent(filePath); }
+  getCreated(): CreatedItem[] { return this.createManager.getAll(); }
+  get createdCount(): number { return this.createManager.activeCount; }
+  toggleCreatedPause(id: string): void { this.createManager.togglePause(id); }
+  removeCreated(id: string): void { this.createManager.remove(id); }
+  restoreCreated(records: CreatedRecord[]): void { this.createManager.restore(records); }
 
-  private async persist(): Promise<void> {
-    await saveQueue(this.getItems()).catch(() => {});
-  }
-
-  // Synchronously flush every state file from current memory. Used on quit so
-  // nothing depends on in-flight async writes surviving the hard exit, and so
-  // history / seeds can never be lost mid-write. Touches no engine state, so it
-  // can never block shutdown.
+  // --- Lifecycle ---
   persistSync(): void {
-    saveQueueSync(this.getItems());
-    saveHistorySync(this.history);
-    saveSeedsSync(this.seedRecords());
-    saveCreatedSync(this.createdRecords());
+    this.downloadManager.persistSync();
+    this.historyManager.persistSync();
+    this.seedManager.persistSync();
+    this.createManager.persistSync();
   }
 
   suspend(): void {
-    // Keep active downloads as "downloading" so restore() resumes them on the
-    // next launch (mirroring how seeds auto-restore); just zero the live stats.
-    for (const it of this.items.values()) {
-      if (it.status === "downloading") {
-        it.speed = 0;
-        it.peers = 0;
-        it.eta = undefined;
-      }
-    }
-    // Zero created items' live stats.
-    for (const c of this.created.values()) {
-      if (c.status === "seeding") {
-        c.uploadSpeed = 0;
-        c.peers = 0;
-      }
-    }
+    this.downloadManager.suspend();
+    this.createManager.suspend();
     this.persistSync();
     if (this.poll) {
       clearInterval(this.poll);
       this.poll = null;
     }
     this.engine.destroy();
-  }
-
-  // --- user-created torrents ------------------------------------------------
-
-  private nextPlaceholder = 0;
-
-  createTorrent(filePath: string): string | null {
-    // Validate the path exists on disk.
-    if (!existsSync(filePath)) return null;
-
-    const name = path.basename(filePath);
-    const placeholder = `__create_${this.nextPlaceholder++}_${Date.now()}`;
-
-    const item: CreatedItem = {
-      id: placeholder,
-      name,
-      sourcePath: filePath,
-      magnet: "",
-      sizeBytes: 0,
-      status: "seeding",
-      uploadSpeed: 0,
-      uploaded: 0,
-      peers: 0,
-      createdAt: Date.now(),
-    };
-    this.created.set(placeholder, item);
-    this.changed();
-
-    this.engine.seed(placeholder, filePath, {
-      onSeed: (result) => {
-        // Remap from placeholder to real infoHash.
-        this.created.delete(placeholder);
-        item.id = result.infoHash;
-        item.magnet = result.magnetURI;
-        item.name = result.name || name;
-        item.sizeBytes = result.length;
-        this.created.set(item.id, item);
-        if (result.torrentFile) void saveTorrentMeta(item.id, result.torrentFile);
-        this.changed();
-        void this.persistCreated();
-      },
-      onError: (msg) => {
-        const c = this.created.get(placeholder);
-        if (c) {
-          c.status = "missing";
-          this.changed();
-          void this.persistCreated();
-        }
-      },
-    });
-
-    this.ensurePoll();
-    return placeholder;
-  }
-
-  getCreated(): CreatedItem[] {
-    return [...this.created.values()].sort((a, b) => b.createdAt - a.createdAt);
-  }
-
-  get createdCount(): number {
-    let n = 0;
-    for (const c of this.created.values()) if (c.status === "seeding") n++;
-    return n;
-  }
-
-  toggleCreatedPause(id: string): void {
-    const c = this.created.get(id);
-    if (!c) return;
-    if (c.status === "seeding") {
-      c.status = "paused";
-      c.uploadSpeed = 0;
-      c.peers = 0;
-      this.engine.remove(id);
-      this.maybeStopPoll();
-    } else if (c.status === "paused") {
-      c.status = "seeding";
-      this.engine.seed(id, c.sourcePath, {
-        onSeed: (result) => {
-          // Re-seed: remap if hash was under a different key.
-          if (result.infoHash !== id) {
-            this.created.delete(id);
-            this.engine.remove(id);
-            c.id = result.infoHash;
-            this.created.set(c.id, c);
-          }
-          c.magnet = result.magnetURI;
-          c.sizeBytes = result.length;
-          this.changed();
-          void this.persistCreated();
-        },
-        onError: () => {
-          c.status = "missing";
-          this.changed();
-          void this.persistCreated();
-        },
-      });
-      this.ensurePoll();
-    } else if (c.status === "missing") {
-      // Retry a missing entry.
-      if (!existsSync(c.sourcePath)) return;
-      c.status = "seeding";
-      this.engine.seed(id, c.sourcePath, {
-        onSeed: (result) => {
-          if (result.infoHash !== id) {
-            this.created.delete(id);
-            c.id = result.infoHash;
-            this.created.set(c.id, c);
-          }
-          c.magnet = result.magnetURI;
-          c.sizeBytes = result.length;
-          this.changed();
-          void this.persistCreated();
-        },
-        onError: () => {
-          c.status = "missing";
-          this.changed();
-          void this.persistCreated();
-        },
-      });
-      this.ensurePoll();
-    }
-    this.changed();
-    void this.persistCreated();
-  }
-
-  removeCreated(id: string): void {
-    if (!this.created.has(id)) return;
-    this.engine.remove(id);
-    this.created.delete(id);
-    this.changed();
-    void this.persistCreated();
-    this.maybeStopPoll();
-  }
-
-  restoreCreated(records: CreatedRecord[]): void {
-    for (const r of records) {
-      const item: CreatedItem = {
-        id: r.id,
-        name: r.name,
-        sourcePath: r.sourcePath,
-        magnet: r.magnet,
-        sizeBytes: r.sizeBytes,
-        status: r.status === "seeding" ? "seeding" : "paused",
-        uploadSpeed: 0,
-        uploaded: 0,
-        peers: 0,
-        createdAt: r.createdAt,
-      };
-      this.created.set(r.id, item);
-      if (r.status === "seeding") {
-        // Resume seeding — use stored .torrent if available, else re-hash.
-        const source = torrentMetaExists(r.id) ? torrentMetaPath(r.id) : r.sourcePath;
-        this.engine.seed(r.id, source, {
-          onSeed: (result) => {
-            if (result.infoHash !== r.id) {
-              this.created.delete(r.id);
-              item.id = result.infoHash;
-              this.created.set(item.id, item);
-            }
-            item.magnet = result.magnetURI;
-            item.sizeBytes = result.length;
-            this.changed();
-            void this.persistCreated();
-          },
-          onError: () => {
-            item.status = "missing";
-            this.changed();
-            void this.persistCreated();
-          },
-        });
-        this.ensurePoll();
-      }
-    }
-    this.changed();
-  }
-
-  private createdRecords(): CreatedRecord[] {
-    const out: CreatedRecord[] = [];
-    for (const c of this.created.values()) {
-      // Only persist items that have a real id (not placeholder).
-      if (c.id.startsWith("__create_")) continue;
-      out.push({
-        id: c.id,
-        name: c.name,
-        sourcePath: c.sourcePath,
-        magnet: c.magnet,
-        sizeBytes: c.sizeBytes,
-        status: c.status === "seeding" ? "seeding" : "paused",
-        createdAt: c.createdAt,
-      });
-    }
-    return out;
-  }
-
-  private persistCreated(): Promise<void> {
-    return saveCreated(this.createdRecords()).catch(() => {});
   }
 }
