@@ -12,14 +12,18 @@ import { magnetFromTorrentFile } from "../sources/torrentFile";
 import { readClipboard, writeClipboard } from "../util/clipboard";
 import { cleanText, truncate } from "../util/format";
 import {
-  StoreContext,
+  ConfigContext,
+  NavigationContext,
+  OverlayContext,
+  FocusContext,
+  QueueContext,
+  LayoutContext,
   type CaptureMode,
   type CreateFocus,
   type DownloadFocus,
   type Region,
   type Section,
   type SeedFocus,
-  type Store,
   type View,
 } from "./store";
 import { Logo } from "./components/Logo";
@@ -314,77 +318,48 @@ export function App({
   const contentWidth = Math.max(24, cols - RAIL_WIDTH - 2);
   const ruleWidth = Math.max(10, cols - 2);
 
-    const store: Store | null = useMemo(() => {
+  const configValue = useMemo(() => {
+    if (!config) return null;
+    return { config, setConfig };
+  }, [config, setConfig]);
+
+  const queueValue = useMemo(() => {
     if (!queue || !config) return null;
-    applyTheme(config.theme);
-    queue.applyConfig({
-      maxConns: config.maxConns,
-      downloadLimit: config.downloadLimit,
-      uploadLimit: config.uploadLimit,
-      notifications: config.notifications,
-    });
-    return {
-      config,
-      setConfig,
-      queue,
-      view,
-      setView,
-      query,
-      submitQuery,
-      section,
-      setSection,
-      region: showHelp || editingFolder ? "help" : region,
-      setRegion,
-      captureMode,
-      setCaptureMode,
-      downloadFocus,
-      setDownloadFocus,
-      seedFocus,
-      setSeedFocus,
-      createFocus,
-      setCreateFocus,
-      pickingTorrent,
-      setPickingTorrent,
-      startDownload,
-      copyMagnet,
-      updateInfo,
-      setUpdateInfo,
-      notice,
-      setNotice,
-      quitAll,
-      listRows,
-      compact,
-      contentWidth,
-      cols,
-      rows,
-    };
-  }, [
-    queue,
-    config,
-    view,
-    query,
-    submitQuery,
-    section,
-    region,
-    showHelp,
-    editingFolder,
-    captureMode,
-    downloadFocus,
-    seedFocus,
-    createFocus,
-    pickingTorrent,
-    startDownload,
-    copyMagnet,
-    updateInfo,
-    notice,
-    listRows,
-    compact,
-    contentWidth,
-    cols,
-    rows,
-    setConfig,
-    quitAll,
-  ]);
+    return { queue, startDownload, copyMagnet, quitAll };
+  }, [queue, config, startDownload, copyMagnet, quitAll]);
+
+  const navValue = useMemo(() => ({
+    view, setView, query, submitQuery, section, setSection,
+    region: showHelp || editingFolder ? "help" : region,
+    setRegion
+  }), [view, query, submitQuery, section, showHelp, editingFolder, region]);
+
+  const overlayValue = useMemo(() => ({
+    captureMode, setCaptureMode, notice, setNotice, updateInfo, setUpdateInfo
+  }), [captureMode, notice, updateInfo]);
+
+  const focusValue = useMemo(() => ({
+    downloadFocus, setDownloadFocus, seedFocus, setSeedFocus,
+    createFocus, setCreateFocus
+  }), [downloadFocus, seedFocus, createFocus]);
+
+  const layoutValue = useMemo(() => ({
+    listRows, compact, contentWidth, cols, rows
+  }), [listRows, compact, contentWidth, cols, rows]);
+
+  useEffect(() => {
+    if (config) {
+      applyTheme(config.theme);
+      if (queue) {
+        queue.applyConfig({
+          maxConns: config.maxConns,
+          downloadLimit: config.downloadLimit,
+          uploadLimit: config.uploadLimit,
+          notifications: config.notifications,
+        });
+      }
+    }
+  }, [config, queue]);
 
 
   useInput(
@@ -426,7 +401,7 @@ export function App({
       }
       if (input === "e") {
         setShowHelp(false);
-        if (store) openFileExplorer(store.config.downloadDir);
+        if (config) openFileExplorer(config.downloadDir);
         return;
       }
       if (input === "t") {
@@ -464,10 +439,10 @@ export function App({
         return;
       }
     },
-    { isActive: isRawModeSupported && view === "browser" && !!store },
+    { isActive: isRawModeSupported && view === "browser" && !!configValue && !!queueValue },
   );
 
-  if (!store) {
+  if (!configValue || !queueValue) {
     return (
       <Box height={rows} justifyContent="center" alignItems="center">
         <Spinner label="Starting windskye" />
@@ -475,17 +450,33 @@ export function App({
     );
   }
 
+  const Providers = ({ children }: { children: React.ReactNode }) => (
+    <ConfigContext.Provider value={configValue}>
+      <NavigationContext.Provider value={navValue}>
+        <OverlayContext.Provider value={overlayValue}>
+          <FocusContext.Provider value={focusValue}>
+            <QueueContext.Provider value={queueValue}>
+              <LayoutContext.Provider value={layoutValue}>
+                {children}
+              </LayoutContext.Provider>
+            </QueueContext.Provider>
+          </FocusContext.Provider>
+        </OverlayContext.Provider>
+      </NavigationContext.Provider>
+    </ConfigContext.Provider>
+  );
+
   if (view === "splash") {
     return (
-      <StoreContext.Provider value={store}>
+      <Providers>
         <TabTitle />
         <Splash />
-      </StoreContext.Provider>
+      </Providers>
     );
   }
 
   return (
-    <StoreContext.Provider value={store}>
+    <Providers>
       <TabTitle />
       <Box 
         flexDirection="column" 
@@ -508,7 +499,7 @@ export function App({
           <Box marginTop={1}>
             <FolderPrompt
               width={Math.max(24, Math.min(cols - 4, 62))}
-              value={store.config.downloadDir}
+              value={config.downloadDir}
               onSubmit={setDownloadDir}
               onCancel={closeFolderPrompt}
             />
@@ -570,6 +561,6 @@ export function App({
           </Box>
         ) : null}
       </Box>
-    </StoreContext.Provider>
+    </Providers>
   );
 }

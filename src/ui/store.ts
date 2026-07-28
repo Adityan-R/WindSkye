@@ -30,30 +30,42 @@ export type SeedFocus = "seeding" | "paused" | "missing" | "idle";
 
 export type CreateFocus = "seeding" | "paused" | "missing" | null;
 
-export interface Store {
+export interface AppConfigContext {
   config: Config;
   setConfig: (c: Config) => void;
-  queue: DownloadQueue;
+}
 
+export interface NavigationContextType {
   view: View;
   setView: (v: View) => void;
   query: string;
   submitQuery: (q: string) => void;
-
   section: Section;
   setSection: (s: Section) => void;
   region: Region;
   setRegion: (r: Region) => void;
+}
+
+export interface OverlayContextType {
   captureMode: CaptureMode;
   setCaptureMode: (m: CaptureMode) => void;
+  notice: string | null;
+  setNotice: (s: string | null) => void;
+  updateInfo: UpdateResult | null;
+  setUpdateInfo: (info: UpdateResult | null) => void;
+}
 
+export interface FocusContextType {
   downloadFocus: DownloadFocus | null;
   setDownloadFocus: (f: DownloadFocus | null) => void;
   seedFocus: SeedFocus | null;
   setSeedFocus: (f: SeedFocus | null) => void;
   createFocus: CreateFocus;
   setCreateFocus: (f: CreateFocus) => void;
+}
 
+export interface QueueContextType {
+  queue: DownloadQueue;
   startDownload: (input: {
     id: string;
     name: string;
@@ -62,15 +74,10 @@ export interface Store {
     sizeBytes?: number;
   }) => void;
   copyMagnet: (input: { name: string; magnet: string }) => void;
-
-  updateInfo: UpdateResult | null;
-  setUpdateInfo: (info: UpdateResult | null) => void;
-
-  notice: string | null;
-  setNotice: (s: string | null) => void;
-
   quitAll: () => void;
+}
 
+export interface LayoutContextType {
   listRows: number;
   compact: boolean;
   contentWidth: number;
@@ -78,11 +85,46 @@ export interface Store {
   rows: number;
 }
 
-export const StoreContext = createContext<Store | null>(null);
+export const ConfigContext = createContext<AppConfigContext | null>(null);
+export const NavigationContext = createContext<NavigationContextType | null>(null);
+export const OverlayContext = createContext<OverlayContextType | null>(null);
+export const FocusContext = createContext<FocusContextType | null>(null);
+export const QueueContext = createContext<QueueContextType | null>(null);
+export const LayoutContext = createContext<LayoutContextType | null>(null);
 
-export function useStore(): Store {
-  const s = useContext(StoreContext);
-  if (!s) throw new Error("Store not available");
+export function useConfigContext(): AppConfigContext {
+  const s = useContext(ConfigContext);
+  if (!s) throw new Error("ConfigContext not available");
+  return s;
+}
+
+export function useNavigationContext(): NavigationContextType {
+  const s = useContext(NavigationContext);
+  if (!s) throw new Error("NavigationContext not available");
+  return s;
+}
+
+export function useOverlayContext(): OverlayContextType {
+  const s = useContext(OverlayContext);
+  if (!s) throw new Error("OverlayContext not available");
+  return s;
+}
+
+export function useFocusContext(): FocusContextType {
+  const s = useContext(FocusContext);
+  if (!s) throw new Error("FocusContext not available");
+  return s;
+}
+
+export function useQueueContext(): QueueContextType {
+  const s = useContext(QueueContext);
+  if (!s) throw new Error("QueueContext not available");
+  return s;
+}
+
+export function useLayoutContext(): LayoutContextType {
+  const s = useContext(LayoutContext);
+  if (!s) throw new Error("LayoutContext not available");
   return s;
 }
 
