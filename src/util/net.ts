@@ -20,7 +20,7 @@ export class HttpError extends Error {
   }
 }
 
-export const RETRY_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+export const RETRY_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]); // Expanded resilient targets
 
 const DEFAULT_RETRIES = 5;
 const DEFAULT_BASE_MS = 500;
