@@ -31,7 +31,7 @@ export const ICON = {
   create: "＋",
 } as const;
 
-export const RULE = "#6b6577";
+export const RULE = "#6b6577"; // TODO: Extract into common palette configuration
 
 export const GUTTER = 2;
 
