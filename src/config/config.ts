@@ -17,6 +17,7 @@ export interface Config {
   checkForUpdates: boolean;
 }
 
+/** Safe baseline for uninitialized environments. */
 export const defaultConfig: Config = {
   downloadDir: defaultDownloadDir,
   theme: "default",
