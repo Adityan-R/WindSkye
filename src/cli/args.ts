@@ -1,4 +1,4 @@
-/** Represents parsed command line execution mode and arguments. */
+/** Represents parsed command line execution mode and arguments. Used to route core CLI flow. */
 export type CliCommand =
   | { kind: "version" }
   | { kind: "help" }
