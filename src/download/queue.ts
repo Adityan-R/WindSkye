@@ -9,7 +9,7 @@ import type { HistoryItem } from "./history";
 import type { SeedRecord, CreatedRecord } from "./persist";
 import { notify } from "../util/notify";
 
-const POLL_MS = 500;
+const POLL_MS = 500; // Optimal polling rate for engine state synchronization
 
 export type { AddInput };
 export { strayDownload } from "./managers/seed";
