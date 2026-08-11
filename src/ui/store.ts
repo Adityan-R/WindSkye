@@ -85,7 +85,7 @@ export interface LayoutContextType {
   rows: number;
 }
 
-export const ConfigContext = createContext<AppConfigContext | null>(null);
+export const ConfigContext = createContext<AppConfigContext | null>(null); // Core state contexts
 export const NavigationContext = createContext<NavigationContextType | null>(null);
 export const OverlayContext = createContext<OverlayContextType | null>(null);
 export const FocusContext = createContext<FocusContextType | null>(null);
